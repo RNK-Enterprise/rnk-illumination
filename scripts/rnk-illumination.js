@@ -192,15 +192,8 @@ Hooks.on('getSceneControlButtons', (controls) => {
     icon: 'fa-solid fa-sun',
     layer: 'controls',
     visible: true,
-    tools: [
-      {
-        name: 'illumination-hub',
-        title: 'Open Hub',
-        icon: 'fa-solid fa-palette',
-        onClick: () => openIlluminationHub(),
-        button: true
-      }
-    ]
+    onClick: () => openIlluminationHub(),
+    tools: []
   };
   if (Array.isArray(controls)) {
     controls.push(controlData);
