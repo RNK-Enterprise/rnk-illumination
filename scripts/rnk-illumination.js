@@ -140,6 +140,14 @@ Hooks.on('targetToken', (user, token) => {
       const userToken = getUserToken(user);
       if (userToken) refreshTokenIllumination(userToken);
     }
+    // Fix for core targeting markers not persisting on multiple targets
+    setTimeout(() => {
+      canvas.tokens.placeables.forEach(t => {
+        if (t.isTargeted) {
+          t.setTarget(true, { releaseOthers: false });
+        }
+      });
+    }, 100);
   }, 50);
 });
 
