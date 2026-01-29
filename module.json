@@ -3,8 +3,8 @@
   "title": "RNK™ Illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
   "version": "1.1.5",
-  "manifest": "https://cdn.jsdelivr.net/gh/RNK-Enterprise/rnk-illumination@1554dd8/module.json",
-  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/v1.1.5/rnk-illumination-1.1.5.zip",
+  "manifest": "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/master/module.json",
+  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/latest/download/rnk-illumination.zip",
   "compatibility": {
     "minimum": "11",
     "verified": "13",
