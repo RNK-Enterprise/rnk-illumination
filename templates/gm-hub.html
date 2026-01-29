@@ -1,0 +1,60 @@
+<div class="rnk-illumination-content">
+  <!-- GM Card -->
+  <div class="rnk-illumination-gm-section">
+    <div class="rnk-illumination-gm-card">
+      <img class="rnk-illumination-avatar" src="{{gm.avatar}}" alt="{{gm.name}}" style="border-color: {{gmSettings.color}}">
+      <div class="rnk-illumination-gm-info">
+        <span class="rnk-illumination-name">{{gm.name}}</span>
+        <span class="rnk-illumination-role">Game Master</span>
+      </div>
+      <input type="color" name="gmColor" value="{{gmSettings.color}}" title="Illumination Color">
+      <select name="gmEffect" title="Effect Style">
+        {{#each effects}}
+        <option value="{{this}}" {{#if (eq this ../gmSettings.effect)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      <select name="gmSymbol" title="Target Symbol">
+        {{#each symbols}}
+        <option value="{{this}}" {{#if (eq this ../gmSettings.symbol)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      <div class="rnk-illumination-custom">
+        <input type="text" name="gmCustomSymbol" value="{{gmSettings.customSymbol}}" placeholder="Image URL or path">
+        <button type="button" class="rnk-upload-btn" data-target="gmCustomSymbol">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Other Users Section -->
+  {{#if users.length}}
+  <div class="rnk-illumination-divider">RNK™ Authorized Users</div>
+
+  <div class="rnk-illumination-grid">
+    {{#each users}}
+    <div class="rnk-illumination-player-card">
+      <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{this.settings.color}}">
+      <span class="rnk-illumination-name">{{this.name}}</span>
+      <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
+      <select name="{{this.id}}_effect" title="Effect Style">
+        {{#each ../effects}}
+        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      <select name="{{this.id}}_symbol" title="Target Symbol">
+        {{#each ../symbols}}
+        <option value="{{this}}" {{#if (eq this ../this.settings.symbol)}}selected{{/if}}>{{this}}</option>
+        {{/each}}
+      </select>
+      <div class="rnk-illumination-custom">
+        <input type="text" name="{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="Image URL or path">
+        <button type="button" class="rnk-upload-btn" data-target="{{this.id}}_customSymbol">Upload</button>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{else}}
+  <div class="rnk-illumination-empty">No other users connected</div>
+  {{/if}}
+
+  <button type="submit" class="rnk-illumination-save">Save All Settings</button>
+</div>
