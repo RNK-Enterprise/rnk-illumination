@@ -261,10 +261,54 @@ function drawTargetingLine(userToken, targetToken, color) {
 
   const colorValue = Color.from(color).valueOf();
 
+  // Calculate distance
+  const pixelDistance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+  const gridDistance = pixelDistance / canvas.grid.size;
+  const unitDistance = gridDistance * (canvas.scene.grid.distance || 5);
+  const units = canvas.scene.grid.units || 'ft';
+
   // Draw line
   graphics.lineStyle(3, colorValue, 1);
   graphics.moveTo(startX, startY);
   graphics.lineTo(endX, endY);
+
+  // Draw measurement markers
+  const markerInterval = 5; // feet
+  const numMarkers = Math.floor(unitDistance / markerInterval);
+
+  if (numMarkers > 0) {
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const totalLength = Math.sqrt(dx * dx + dy * dy);
+    const unitVectorX = dx / totalLength;
+    const unitVectorY = dy / totalLength;
+
+    for (let i = 1; i <= numMarkers; i++) {
+      const distance = i * markerInterval;
+      const pixelDistance = (distance / (canvas.scene.grid.distance || 5)) * canvas.grid.size;
+      const markerX = startX + unitVectorX * pixelDistance;
+      const markerY = startY + unitVectorY * pixelDistance;
+
+      // Draw marker dot
+      graphics.lineStyle(0);
+      graphics.beginFill(colorValue, 0.8);
+      graphics.drawCircle(markerX, markerY, 3);
+      graphics.endFill();
+
+      // Draw distance label
+      const text = new PIXI.Text(`${distance}${units}`, {
+        fontFamily: 'Arial',
+        fontSize: 12,
+        fill: colorValue,
+        align: 'center',
+        stroke: 0x000000,
+        strokeThickness: 2
+      });
+      text.anchor.set(0.5, 0.5);
+      text.position.set(markerX, markerY - 15);
+      graphics.addChild(text);
+    }
+  }
 
   // Draw arrows
   const angle = Math.atan2(endY - startY, endX - startX);
