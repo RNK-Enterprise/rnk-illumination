@@ -335,5 +335,6 @@
     }
   ],
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
-  "license": "MIT"
+  "license": "MIT",
+  "_note": "Updated manifest for v1.2.11"
 }
