@@ -30,7 +30,7 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 ## Usage
 
 ### Scene Control Button
-- Look for the lightbulb icon in the scene controls toolbar
+- Look for the sun icon in the scene controls toolbar
 - Click it to open your illumination hub instantly
 
 ### Macro for Hotkey
