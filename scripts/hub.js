@@ -61,10 +61,15 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const users = game.users.filter(u => u.id !== game.user.id).map(user => {
       const settings = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+      // Use Foundry's safe avatar method or default if avatar is a local file
+      let avatar = user.avatar;
+      if (avatar && avatar.startsWith('file://')) {
+        avatar = 'icons/svg/mystery-man.svg'; // Foundry's default avatar
+      }
       return {
         id: user.id,
         name: user.name,
-        avatar: user.avatar,
+        avatar: avatar,
         color: sanitizeColor(user.color),
         isGM: user.isGM,
         settings: {
@@ -77,11 +82,16 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     const gmUser = game.user;
     const gmSettings = gmUser.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+    // Use Foundry's safe avatar method or default if avatar is a local file
+    let gmAvatar = gmUser.avatar;
+    if (gmAvatar && gmAvatar.startsWith('file://')) {
+      gmAvatar = 'icons/svg/mystery-man.svg'; // Foundry's default avatar
+    }
     return {
       gm: {
         id: gmUser.id,
         name: gmUser.name,
-        avatar: gmUser.avatar,
+        avatar: gmAvatar,
         color: sanitizeColor(gmUser.color)
       },
       users: users,
