@@ -109,7 +109,7 @@ Hooks.on('init', () => {
   game.keybindings.register(MODULE_ID, 'targetHovered', {
     name: 'Target Hovered Token',
     hint: 'Toggle targeting on the currently hovered token',
-    editable: [{ key: 'KeyT', modifiers: [KeyboardManager.MODIFIER_KEYS.SHIFT] }],
+    editable: [{ key: 'KeyT', modifiers: [foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT] }],
     onDown: () => {
       const hoveredToken = canvas.tokens._hover;
       if (hoveredToken) {
@@ -140,43 +140,17 @@ Hooks.on('targetToken', (user, token) => {
     refreshTokenIllumination(token);
     if (user) {
       const userToken = getUserToken(user);
-      if (userToken) refreshTokenIllumination(userToken);
-    }
-    // Fix for core targeting markers not persisting on multiple targets
-    setTimeout(() => {
-      canvas.tokens.placeables.forEach(t => {
-        if (t.isTargeted && !t.target) {
-          const g = new PIXI.Graphics();
-          g.name = 'target';
-          const color = 0xFF9829; // Foundry's default target color
-          const size = Math.max(t.w, t.h) / 6;
-          g.lineStyle(2, color, 1.0);
-          // Draw the 4 corner arrows
-          // Top-left
-          g.moveTo(0, 0);
-          g.lineTo(size, 0);
-          g.moveTo(0, 0);
-          g.lineTo(0, size);
-          // Top-right
-          g.moveTo(t.w, 0);
-          g.lineTo(t.w - size, 0);
-          g.moveTo(t.w, 0);
-          g.lineTo(t.w, size);
-          // Bottom-left
-          g.moveTo(0, t.h);
-          g.lineTo(size, t.h);
-          g.moveTo(0, t.h);
-          g.lineTo(0, t.h - size);
-          // Bottom-right
-          g.moveTo(t.w, t.h);
-          g.lineTo(t.w - size, t.h);
-          g.moveTo(t.w, t.h);
-          g.lineTo(t.w, t.h - size);
-          t.addChild(g);
-          t.target = g;
+      if (userToken) {
+        refreshTokenIllumination(userToken);
+        // Draw targeting line if token is targeted
+        if (token.isTargeted) {
+          const settings = getUserSettings(user.id);
+          drawTargetingLine(userToken, token, settings.color);
+        } else {
+          removeTargetingLine(userToken, token);
         }
-      });
-    }, 100);
+      }
+    }
   }, 50);
 });
 
@@ -205,6 +179,7 @@ Hooks.on('canvasTearDown', () => {
     });
   }
   clearTargetingIndicators();
+  clearTargetingLines();
 });
 
 // Button Registration Standard
@@ -266,6 +241,93 @@ function injectModuleButtons(html) {
       }
     });
     button.dataset.moduleHandler = 'true';
+  }
+}
+
+// Targeting line container
+let _targetingLineContainer = null;
+
+/**
+ * Initialize targeting line container
+ */
+function initTargetingLines() {
+  if (_targetingLineContainer) return;
+  _targetingLineContainer = new PIXI.Container();
+  _targetingLineContainer.name = 'rnk-targeting-lines';
+  canvas.stage.addChild(_targetingLineContainer);
+  _targetingLineContainer.zIndex = 1000;
+}
+
+/**
+ * Draw targeting line from user token to target
+ * @param {Token} userToken - The user's token
+ * @param {Token} targetToken - The targeted token
+ * @param {string} color - The color for the line
+ */
+function drawTargetingLine(userToken, targetToken, color) {
+  if (!userToken || !targetToken || !canvas) return;
+
+  initTargetingLines();
+
+  // Remove existing line for this pair
+  const existing = _targetingLineContainer.children.find(c => c.name === `line-${userToken.id}-${targetToken.id}`);
+  if (existing) _targetingLineContainer.removeChild(existing);
+
+  const graphics = new PIXI.Graphics();
+  graphics.name = `line-${userToken.id}-${targetToken.id}`;
+
+  const startX = userToken.center.x;
+  const startY = userToken.center.y;
+  const endX = targetToken.center.x;
+  const endY = targetToken.center.y;
+
+  const colorValue = Color.from(color).valueOf();
+
+  // Draw line
+  graphics.lineStyle(3, colorValue, 1);
+  graphics.moveTo(startX, startY);
+  graphics.lineTo(endX, endY);
+
+  // Draw arrows
+  const angle = Math.atan2(endY - startY, endX - startX);
+  const arrowLength = 15;
+  const arrowAngle = Math.PI / 6; // 30 degrees
+
+  // Arrowhead at end
+  graphics.lineStyle(0);
+  graphics.beginFill(colorValue, 1);
+  graphics.moveTo(endX, endY);
+  graphics.lineTo(
+    endX - arrowLength * Math.cos(angle - arrowAngle),
+    endY - arrowLength * Math.sin(angle - arrowAngle)
+  );
+  graphics.lineTo(
+    endX - arrowLength * Math.cos(angle + arrowAngle),
+    endY - arrowLength * Math.sin(angle + arrowAngle)
+  );
+  graphics.lineTo(endX, endY);
+  graphics.endFill();
+
+  _targetingLineContainer.addChild(graphics);
+}
+
+/**
+ * Remove targeting line
+ * @param {Token} userToken - The user's token
+ * @param {Token} targetToken - The targeted token
+ */
+function removeTargetingLine(userToken, targetToken) {
+  if (!_targetingLineContainer) return;
+  const existing = _targetingLineContainer.children.find(c => c.name === `line-${userToken.id}-${targetToken.id}`);
+  if (existing) _targetingLineContainer.removeChild(existing);
+}
+
+/**
+ * Clear all targeting lines
+ */
+function clearTargetingLines() {
+  if (_targetingLineContainer) {
+    _targetingLineContainer.removeChildren();
   }
 }
 
