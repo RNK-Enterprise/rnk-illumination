@@ -190,17 +190,35 @@ Hooks.on('getSceneControlButtons', (controls) => {
       name: MODULE_ID,
       title: 'RNK Illumination',
       icon: 'fa-solid fa-sun',
-      order: 99999,
-      visible: true,
-      onClick: () => {
-        console.log('RNK Illumination | Main button clicked');
-        openIlluminationHub();
-      }
+      order: 100,
+      visible: true
     };
     if (Array.isArray(controls)) controls.push(controlData);
     else controls[MODULE_ID] = controlData;
   }
 });
+
+Hooks.on('renderSceneControls', (app, html) => {
+  if (!game.user.isGM) return;
+  requestAnimationFrame(() => {
+    injectModuleButtons(html);
+  });
+});
+
+function injectModuleButtons(html) {
+  const root = (html instanceof HTMLElement) ? html : (html[0] || document);
+  const button = root.querySelector(`[data-control="${MODULE_ID}"]`);
+  if (!button) return;
+  button.classList.add('module-control-btn');
+  if (!button.dataset.moduleHandler) {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openIlluminationHub();
+    });
+    button.dataset.moduleHandler = 'true';
+  }
+}
 
 // Targeting line container
 let _targetingLineContainer = null;
