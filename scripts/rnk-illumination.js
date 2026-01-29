@@ -182,25 +182,8 @@ Hooks.on('canvasTearDown', () => {
   clearTargetingLines();
 });
 
-// Button Registration Standard
-Hooks.on('getSceneControlButtons', (controls) => {
-  if (game.user.isGM) {
-    console.log('RNK Illumination | getSceneControlButtons hook fired');
-    const controlData = {
-      name: MODULE_ID,
-      title: 'RNK Illumination',
-      icon: 'fa-solid fa-sun',
-      order: 99999,
-      visible: true,
-      onClick: () => {
-        console.log('RNK Illumination | Main button clicked');
-        openIlluminationHub();
-      }
-    };
-    if (Array.isArray(controls)) controls.push(controlData);
-    else controls[MODULE_ID] = controlData;
-  }
-});
+// Scene control button removed due to Foundry v13 compatibility issues
+// Access the hub through Module Settings > RNK Illumination > Open Hub
 
 // Targeting line container
 let _targetingLineContainer = null;
