@@ -192,8 +192,15 @@ Hooks.on('getSceneControlButtons', (controls) => {
     icon: 'fa-solid fa-sun',
     layer: 'controls',
     visible: true,
-    onClick: () => openIlluminationHub(),
-    tools: []
+    tools: [
+      {
+        name: 'illumination-hub',
+        title: 'Open Hub',
+        icon: 'fa-solid fa-palette',
+        onClick: () => openIlluminationHub(),
+        button: true
+      }
+    ]
   };
   if (Array.isArray(controls)) {
     controls.push(controlData);
@@ -201,6 +208,18 @@ Hooks.on('getSceneControlButtons', (controls) => {
     controls[MODULE_ID] = controlData;
   }
   return controls;
+});
+
+Hooks.on('renderSceneControls', (app, html, data) => {
+  if (!game.user?.isGM) return;
+  const button = html.querySelector(`[data-control="${MODULE_ID}"]`);
+  if (button) {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openIlluminationHub();
+    });
+  }
 });
 
 // Targeting line container
