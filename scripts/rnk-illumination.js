@@ -184,36 +184,29 @@ Hooks.on('canvasTearDown', () => {
 
 // Button Registration Standard
 Hooks.on('getSceneControlButtons', (controls) => {
-  // If Foundry passes an undefined or null controls object, bail out safely
   if (!controls) return controls;
-  // Only add controls for GMs
   if (!game.user?.isGM) return controls;
-
-  try {
-    console.log('RNK Illumination | getSceneControlButtons hook fired');
-    const controlData = {
-      name: MODULE_ID,
-      title: 'RNK Illumination',
-      icon: 'fa-solid fa-sun',
-      order: 99999,
-      visible: true,
-      onClick: () => {
-        console.log('RNK Illumination | Main button clicked');
-        openIlluminationHub();
+  const controlData = {
+    name: MODULE_ID,
+    title: 'RNK Illumination',
+    icon: 'fa-solid fa-sun',
+    layer: 'controls',
+    visible: true,
+    tools: [
+      {
+        name: 'illumination-hub',
+        title: 'Open Hub',
+        icon: 'fa-solid fa-palette',
+        onClick: () => openIlluminationHub(),
+        button: true
       }
-    };
-
-    if (Array.isArray(controls)) {
-      controls.push(controlData);
-    } else if (typeof controls === 'object' && controls !== null) {
-      // If controls is an object mapping, set our control safely
-      controls[MODULE_ID] = controlData;
-    }
-  } catch (err) {
-    console.error('RNK Illumination | Error in getSceneControlButtons hook', err);
+    ]
+  };
+  if (Array.isArray(controls)) {
+    controls.push(controlData);
+  } else if (typeof controls === 'object' && controls !== null) {
+    controls[MODULE_ID] = controlData;
   }
-
-  // Always return the controls object to avoid Foundry throwing on undefined
   return controls;
 });
 
