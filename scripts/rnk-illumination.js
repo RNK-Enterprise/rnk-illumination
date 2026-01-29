@@ -183,7 +183,32 @@ Hooks.on('canvasTearDown', () => {
 });
 
 // Button Registration Standard
-// Removed scene control button due to compatibility issues - use module settings instead
+Hooks.on('getSceneControlButtons', (controls) => {
+  if (!game.user?.isGM || !controls) return;
+  const controlData = {
+    name: MODULE_ID,
+    title: 'RNK Illumination',
+    icon: 'fa-solid fa-sun',
+    layer: 'controls',
+    visible: true,
+    tools: []
+  };
+  if (Array.isArray(controls)) {
+    controls.push(controlData);
+  } else if (typeof controls === 'object') {
+    controls[MODULE_ID] = controlData;
+  }
+});
+
+Hooks.on('renderSceneControls', (app, html, data) => {
+  if (!game.user?.isGM) return;
+  const button = html.find(`[data-control="${MODULE_ID}"]`);
+  if (button.length) {
+    button.on('click', () => {
+      openIlluminationHub();
+    });
+  }
+});
 
 // Targeting line container
 let _targetingLineContainer = null;
