@@ -186,37 +186,21 @@ Hooks.on('canvasTearDown', () => {
 Hooks.on('getSceneControlButtons', (controls) => {
   if (game.user.isGM) {
     console.log('RNK Illumination | getSceneControlButtons hook fired');
-    const moduleTools = buildModuleTools();
     const controlData = {
       name: MODULE_ID,
       title: 'RNK Illumination',
       icon: 'fa-solid fa-sun',
       order: 99999,
       visible: true,
-      tools: moduleTools
+      onClick: () => {
+        console.log('RNK Illumination | Main button clicked');
+        openIlluminationHub();
+      }
     };
     if (Array.isArray(controls)) controls.push(controlData);
     else controls[MODULE_ID] = controlData;
   }
 });
-
-function buildModuleTools() {
-  const tools = [];
-  tools.push({
-    name: 'illumination-hub',
-    title: 'Open Hub',
-    icon: 'fa-solid fa-palette',
-    order: 0,
-    button: true,
-    toggle: false,
-    active: false,
-    onClick: () => {
-      console.log('RNK Illumination | Tool clicked');
-      openIlluminationHub();
-    }
-  });
-  return tools;
-}
 
 // Targeting line container
 let _targetingLineContainer = null;
