@@ -2,7 +2,10 @@
   <!-- GM Card -->
   <div class="rnk-illumination-gm-section">
     <div class="rnk-illumination-gm-card">
-      <img class="rnk-illumination-avatar" src="{{gm.avatar}}" alt="{{gm.name}}" style="border-color: {{gmSettings.color}}">
+      <div class="rnk-illumination-avatar-container">
+        <img class="rnk-illumination-avatar" src="{{gm.avatar}}" alt="{{gm.name}}" style="border-color: {{gmSettings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
+        <button type="button" class="rnk-avatar-upload-btn" data-user="{{gm.id}}" title="Upload Avatar">📷</button>
+      </div>
       <div class="rnk-illumination-gm-info">
         <span class="rnk-illumination-name">{{gm.name}}</span>
         <span class="rnk-illumination-role">Game Master</span>
@@ -32,7 +35,10 @@
   <div class="rnk-illumination-grid">
     {{#each users}}
     <div class="rnk-illumination-player-card">
-      <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{this.settings.color}}">
+      <div class="rnk-illumination-avatar-container">
+        <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{this.settings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
+        <button type="button" class="rnk-avatar-upload-btn" data-user="{{this.id}}" title="Upload Avatar">📷</button>
+      </div>
       <span class="rnk-illumination-name">{{this.name}}</span>
       <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
       <select name="{{this.id}}_effect" title="Effect Style">
