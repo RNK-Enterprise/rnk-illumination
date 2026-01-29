@@ -104,6 +104,21 @@ export function refreshAllTokenIllumination() {
 }
 
 // Hooks
+Hooks.on('init', () => {
+  // Register keybinding for targeting hovered token
+  game.keybindings.register(MODULE_ID, 'targetHovered', {
+    name: 'Target Hovered Token',
+    hint: 'Toggle targeting on the currently hovered token',
+    editable: [{ key: 'KeyT', modifiers: [KeyboardManager.MODIFIER_KEYS.SHIFT] }],
+    onDown: () => {
+      const hoveredToken = canvas.tokens._hover;
+      if (hoveredToken) {
+        hoveredToken.setTarget(!hoveredToken.isTargeted, { user: game.user });
+      }
+    }
+  });
+});
+
 Hooks.on('ready', () => {
   if (game.user?.isGM) {
     game.settings.registerMenu(MODULE_ID, 'gmHub', {
@@ -127,6 +142,41 @@ Hooks.on('targetToken', (user, token) => {
       const userToken = getUserToken(user);
       if (userToken) refreshTokenIllumination(userToken);
     }
+    // Fix for core targeting markers not persisting on multiple targets
+    setTimeout(() => {
+      canvas.tokens.placeables.forEach(t => {
+        if (t.isTargeted && !t.target) {
+          const g = new PIXI.Graphics();
+          g.name = 'target';
+          const color = 0xFF9829; // Foundry's default target color
+          const size = Math.max(t.w, t.h) / 6;
+          g.lineStyle(2, color, 1.0);
+          // Draw the 4 corner arrows
+          // Top-left
+          g.moveTo(0, 0);
+          g.lineTo(size, 0);
+          g.moveTo(0, 0);
+          g.lineTo(0, size);
+          // Top-right
+          g.moveTo(t.w, 0);
+          g.lineTo(t.w - size, 0);
+          g.moveTo(t.w, 0);
+          g.lineTo(t.w, size);
+          // Bottom-left
+          g.moveTo(0, t.h);
+          g.lineTo(size, t.h);
+          g.moveTo(0, t.h);
+          g.lineTo(0, t.h - size);
+          // Bottom-right
+          g.moveTo(t.w, t.h);
+          g.lineTo(t.w - size, t.h);
+          g.moveTo(t.w, t.h);
+          g.lineTo(t.w, t.h - size);
+          t.addChild(g);
+          t.target = g;
+        }
+      });
+    }, 100);
   }, 50);
 });
 
