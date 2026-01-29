@@ -202,9 +202,9 @@ Hooks.on('getSceneControlButtons', (controls) => {
 
 Hooks.on('renderSceneControls', (app, html, data) => {
   if (!game.user?.isGM) return;
-  const button = html.find(`[data-control="${MODULE_ID}"]`);
-  if (button.length) {
-    button.on('click', () => {
+  const button = html.querySelector(`[data-control="${MODULE_ID}"]`);
+  if (button) {
+    button.addEventListener('click', () => {
       openIlluminationHub();
     });
   }
