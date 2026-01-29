@@ -184,29 +184,21 @@ Hooks.on('canvasTearDown', () => {
 
 // Button Registration Standard
 Hooks.on('getSceneControlButtons', (controls) => {
-  if (!game.user?.isGM || !controls) return;
-  const controlData = {
-    name: MODULE_ID,
-    title: 'RNK Illumination',
-    icon: 'fa-solid fa-sun',
-    layer: 'controls',
-    visible: true,
-    tools: []
-  };
-  if (Array.isArray(controls)) {
-    controls.push(controlData);
-  } else if (typeof controls === 'object') {
-    controls[MODULE_ID] = controlData;
-  }
-});
-
-Hooks.on('renderSceneControls', (app, html, data) => {
-  if (!game.user?.isGM) return;
-  const button = html.querySelector(`[data-control="${MODULE_ID}"]`);
-  if (button) {
-    button.addEventListener('click', () => {
-      openIlluminationHub();
-    });
+  if (game.user.isGM) {
+    console.log('RNK Illumination | getSceneControlButtons hook fired');
+    const controlData = {
+      name: MODULE_ID,
+      title: 'RNK Illumination',
+      icon: 'fa-solid fa-sun',
+      order: 99999,
+      visible: true,
+      onClick: () => {
+        console.log('RNK Illumination | Main button clicked');
+        openIlluminationHub();
+      }
+    };
+    if (Array.isArray(controls)) controls.push(controlData);
+    else controls[MODULE_ID] = controlData;
   }
 });
 
