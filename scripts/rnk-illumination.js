@@ -6,7 +6,7 @@
 import { DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
 import { clearTargetingIndicators, hideTargetingIndicator, showTargetingIndicator } from './targeting.js';
 import { applyEffect, removeEffect, sanitizeColor } from './effects.js';
-import { openIlluminationHub, RNKGMHub } from './hub.js';
+import { RNKGMHub } from './hub.js';
 
 // Debounce timer for refresh all
 let _refreshAllTimeout = null;
@@ -184,65 +184,8 @@ Hooks.on('canvasTearDown', () => {
 
 // Button Registration Standard
 Hooks.on('getSceneControlButtons', (controls) => {
-  if (game.user.isGM) {
-    console.log('RNK Illumination | getSceneControlButtons hook fired');
-    const moduleTools = buildModuleTools();
-    const controlData = {
-      name: MODULE_ID,
-      title: 'RNK Illumination',
-      icon: 'fa-solid fa-sun',
-      order: 99999,
-      visible: true,
-      tools: moduleTools
-    };
-    if (Array.isArray(controls)) controls.push(controlData);
-    else controls[MODULE_ID] = controlData;
-  }
+  // Removed redundant illumination hub button - use module settings instead
 });
-
-function buildModuleTools() {
-  const tools = [];
-  tools.push({
-    name: 'illumination-hub',
-    title: 'Open Hub',
-    icon: 'fa-solid fa-palette',
-    order: 0,
-    button: true,
-    toggle: false,
-    active: false,
-    onClick: () => {
-      console.log('RNK Illumination | Tool clicked');
-      openIlluminationHub();
-    }
-  });
-  return tools;
-}
-
-Hooks.on('renderSceneControls', (app, html) => {
-  if (!game.user.isGM) return;
-  requestAnimationFrame(() => {
-    injectModuleButtons(html);
-  });
-});
-
-function injectModuleButtons(html) {
-  const root = (html instanceof HTMLElement) ? html : (html[0] || document);
-  const button = root.querySelector(`[data-control="${MODULE_ID}"]`) ||
-                 document.querySelector(`[data-control="${MODULE_ID}"]`);
-  if (!button) return;
-  button.classList.add('module-control-btn');
-  if (!button.dataset.moduleHandler) {
-    button.addEventListener('click', (event) => {
-      const isActive = button.classList.contains('active') || button.getAttribute('aria-pressed') === 'true';
-      if (isActive) {
-        event.preventDefault();
-        event.stopPropagation();
-        openIlluminationHub();
-      }
-    });
-    button.dataset.moduleHandler = 'true';
-  }
-}
 
 // Targeting line container
 let _targetingLineContainer = null;
@@ -333,5 +276,4 @@ function clearTargetingLines() {
 
 // Global exposure
 globalThis.refreshAllTokenIllumination = refreshAllTokenIllumination;
-globalThis.openIlluminationHub = openIlluminationHub;
 globalThis.RNKGMHub = RNKGMHub;
