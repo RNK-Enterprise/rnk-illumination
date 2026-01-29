@@ -131,6 +131,7 @@ Hooks.on('ready', () => {
     });
   }
   if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
+});
 
 Hooks.on('canvasReady', refreshAllTokenIllumination);
 
