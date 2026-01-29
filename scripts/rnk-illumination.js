@@ -104,19 +104,7 @@ export function refreshAllTokenIllumination() {
 }
 
 // Hooks
-Hooks.on('ready', () => {
-  if (game.user?.isGM) {
-    game.settings.registerMenu(MODULE_ID, 'gmHub', {
-      name: 'RNK Illumination Hub',
-      label: 'Open Hub',
-      hint: 'Configure player illumination colors and effects',
-      icon: 'fas fa-palette',
-      type: RNKGMHub,
-      restricted: true
-    });
-  }
-  if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
-
+Hooks.on('init', () => {
   // Register keybinding for targeting hovered token
   game.keybindings.register(MODULE_ID, 'targetHovered', {
     name: 'Target Hovered Token',
@@ -130,6 +118,19 @@ Hooks.on('ready', () => {
     }
   });
 });
+
+Hooks.on('ready', () => {
+  if (game.user?.isGM) {
+    game.settings.registerMenu(MODULE_ID, 'gmHub', {
+      name: 'RNK Illumination Hub',
+      label: 'Open Hub',
+      hint: 'Configure player illumination colors and effects',
+      icon: 'fas fa-palette',
+      type: RNKGMHub,
+      restricted: true
+    });
+  }
+  if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
 
 Hooks.on('canvasReady', refreshAllTokenIllumination);
 
