@@ -12,6 +12,7 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 - **Standard Targeting**: Right-click to target tokens (compatible across all Foundry versions)
 - **Universal Visibility**: Effects are visible to all players for clear targeting indication
 - **System Agnostic**: Works with any game system
+- **Lang Support**: Upon request per user
 
 ## Effects Available
 
