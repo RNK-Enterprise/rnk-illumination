@@ -2,7 +2,7 @@
   "id": "rnk-illumination",
   "title": "RNK™ Illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
-  "version": "1.2.14",
+  "version": "1.2.15",
   "compatibility": {
     "minimum": "11",
     "verified": "13",
@@ -25,6 +25,5 @@
     }
   ],
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
-  "license": "MIT",
-  "_note": "Updated manifest for v1.2.11"
+  "license": "MIT"
 }
