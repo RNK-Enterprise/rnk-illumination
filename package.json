@@ -1,9 +1,18 @@
 {
   "name": "rnk-illumination",
-  "version": "1.2.13",
+  "version": "1.2.16",
   "description": "RNK™ Illumination Module",
   "main": "scripts/rnk-illumination.js",
   "type": "module",
+  "files": [
+    "scripts/",
+    "styles/",
+    "templates/",
+    "lang/",
+    "module.json",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "test": "vitest run --coverage"
   },
