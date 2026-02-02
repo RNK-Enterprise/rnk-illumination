@@ -1,6 +1,6 @@
 {
   "name": "rnk-illumination",
-  "version": "2.2.0",
+  "version": "2.4.0",
   "description": "RNK™ Illumination Module",
   "main": "scripts/rnk-illumination-Wohdan.js",
   "type": "module",

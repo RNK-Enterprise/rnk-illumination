@@ -2,7 +2,7 @@
   "id": "rnk-illumination",
   "title": "RNK™ Illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "compatibility": {
     "minimum": "11",
     "verified": "13"
