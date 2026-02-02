@@ -23,6 +23,8 @@
     }
   ],
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
+  "manifest": "https://r2.foundryvtt.com/packages-public/rnk-illumination/module.json",
+  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/v1.2.18/rnk-illumination-1.2.18.zip",
   "license": "MIT",
   "protected": false
 }
