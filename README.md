@@ -67,6 +67,21 @@ Players do not have a hub; illumination settings are controlled by the GM via th
 - Effects are applied client-side but visible to all players
 - Access hubs via scene control button or create macros for hotkeys
 
+## Release Notes v2.3.0
+
+- **Multiple Targeting Lines**: Support for simultaneous targeting of multiple tokens
+- **User Color Lines**: Targeting lines now match each user's configured hub color
+- **Symbol Markers**: Distance markers display user's configured symbol/icon
+- **Pulsating Targets**: Targeted tokens now pulsate with their illumination effect
+- **Enhanced Targeting**: Improved targeting system with visual feedback
+
+## Release Notes v2.2.0
+
+- **Targeting Lines**: Visual measurement lines between user tokens and targets
+- **Distance Markers**: Automatic distance markers every 5 feet along targeting lines
+- **Arrow Indicators**: Directional arrows showing targeting direction
+- **Canvas Integration**: Lines render on canvas controls layer for proper visibility
+
 ## Release Notes v1.0.0
 
 - Initial release of RNK™ Illumination

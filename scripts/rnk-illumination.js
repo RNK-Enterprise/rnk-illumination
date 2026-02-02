@@ -31,6 +31,9 @@ function getUserSettings(userId) {
  */
 function getUserToken(user) {
   if (!user || !canvas?.tokens?.placeables) return null;
+  
+  // Find the token owned by this user (NOT the controlled token)
+  // We need the user's own token, not the one they're controlling
   return canvas.tokens.placeables.find(token => {
     const actor = token.actor;
     return actor?.testUserPermission(user, 'OWNER');
@@ -133,22 +136,54 @@ Hooks.on('ready', () => {
   if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
 });
 
-Hooks.on('canvasReady', refreshAllTokenIllumination);
+Hooks.on('canvasReady', () => {
+  initTargetingLines();
+  refreshAllTokenIllumination();
+});
 
-Hooks.on('targetToken', (user, token) => {
+Hooks.on('targetToken', (user, token, isTargeted) => {
+  console.log('RNK™ Illumination | ========== ALL TOKENS ON SCENE ==========');
+  canvas.tokens.placeables.forEach(t => {
+    console.log(`  - ${t.name} (ID: ${t.id}) Owner: ${t.actor?.name}`);
+  });
+  console.log('RNK™ Illumination | =========================================');
+  
+  console.log('RNK™ Illumination | targetToken hook fired!', { 
+    user: user?.name, 
+    token: token?.name,
+    tokenId: token?.id,
+    isTargeted 
+  });
+  
   setTimeout(() => {
     refreshTokenIllumination(token);
     if (user) {
+      console.log('RNK™ Illumination | Controlled tokens:', canvas.tokens.controlled.map(t => `${t.name} (${t.id})`));
+      console.log('RNK™ Illumination | Looking for user token for:', user.name);
       const userToken = getUserToken(user);
+      console.log('RNK™ Illumination | User token found:', userToken?.name, 'ID:', userToken?.id);
+      console.log('RNK™ Illumination | Target token:', token?.name, 'ID:', token?.id);
+      
       if (userToken) {
         refreshTokenIllumination(userToken);
+        
+        // Don't draw line to self
+        if (userToken.id === token.id) {
+          console.log('RNK™ Illumination | Cannot draw line to self, skipping');
+          return;
+        }
+        
         // Draw targeting line if token is targeted
-        if (token.isTargeted) {
+        if (isTargeted) {
+          console.log('RNK™ Illumination | Token IS targeted, drawing line');
           const settings = getUserSettings(user.id);
-          drawTargetingLine(userToken, token, settings.color);
+          drawTargetingLine(userToken, token, settings.color, settings.symbol);
         } else {
+          console.log('RNK™ Illumination | Token NOT targeted, removing line');
           removeTargetingLine(userToken, token);
         }
+      } else {
+        console.log('RNK™ Illumination | No user token found - cannot draw line');
       }
     }
   }, 50);
@@ -190,6 +225,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
     name: MODULE_ID,
     title: 'RNK Illumination',
     icon: 'fa-solid fa-sun',
+    order: 99999,
     layer: 'controls',
     visible: true,
     tools: [
@@ -198,7 +234,10 @@ Hooks.on('getSceneControlButtons', (controls) => {
         title: 'Open Hub',
         icon: 'fa-solid fa-palette',
         onClick: () => openIlluminationHub(),
-        button: true
+        button: true,
+        toggle: false,
+        active: false,
+        order: 0
       }
     ]
   };
@@ -212,28 +251,41 @@ Hooks.on('getSceneControlButtons', (controls) => {
 
 Hooks.on('renderSceneControls', (app, html, data) => {
   if (!game.user?.isGM) return;
-  const button = html.querySelector(`[data-control="${MODULE_ID}"]`);
-  if (button) {
-    button.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openIlluminationHub();
-    });
-  }
+  const root = (html instanceof HTMLElement) ? html : (html?.[0] || document);
+  const button = root.querySelector(`[data-control="${MODULE_ID}"]`) ||
+                 document.querySelector(`[data-control="${MODULE_ID}"]`);
+  if (!button) return;
+  button.classList.add('module-control-btn');
+  if (button.dataset.moduleHandler) return;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openIlluminationHub();
+  });
+  button.dataset.moduleHandler = 'true';
 });
 
-// Targeting line container
-let _targetingLineContainer = null;
+// Targeting lines - Map of user IDs to Maps of target IDs to Graphics objects
+const _targetingLines = new Map();
 
 /**
- * Initialize targeting line container
+ * Get or create targeting line graphics for a user-target pair
  */
-function initTargetingLines() {
-  if (_targetingLineContainer) return;
-  _targetingLineContainer = new PIXI.Container();
-  _targetingLineContainer.name = 'rnk-targeting-lines';
-  canvas.stage.addChild(_targetingLineContainer);
-  _targetingLineContainer.zIndex = 1000;
+function getTargetingLineGraphics(userId, targetId) {
+  if (!_targetingLines.has(userId)) {
+    _targetingLines.set(userId, new Map());
+  }
+  
+  const userLines = _targetingLines.get(userId);
+  if (!userLines.has(targetId)) {
+    const graphics = new PIXI.Graphics();
+    graphics.name = `rnk-targeting-${userId}-${targetId}`;
+    canvas.controls.addChild(graphics);
+    graphics.zIndex = 100;
+    userLines.set(targetId, graphics);
+  }
+  
+  return userLines.get(targetId);
 }
 
 /**
@@ -241,25 +293,32 @@ function initTargetingLines() {
  * @param {Token} userToken - The user's token
  * @param {Token} targetToken - The targeted token
  * @param {string} color - The color for the line
+ * @param {string} symbol - The symbol/icon for markers
  */
-function drawTargetingLine(userToken, targetToken, color) {
-  if (!userToken || !targetToken || !canvas) return;
+function drawTargetingLine(userToken, targetToken, color, symbol) {
+  if (!userToken || !targetToken || !canvas) {
+    console.log('RNK™ Illumination | Cannot draw line - missing token or canvas');
+    return;
+  }
+  
+  const userId = userToken.actor?.id || userToken.id;
+  const targetId = targetToken.id;
+  const graphics = getTargetingLineGraphics(userId, targetId);
+  
+  console.log(`RNK™ Illumination | Drawing targeting line from ${userToken.name} to ${targetToken.name} with color ${color}`);
 
-  initTargetingLines();
-
-  // Remove existing line for this pair
-  const existing = _targetingLineContainer.children.find(c => c.name === `line-${userToken.id}-${targetToken.id}`);
-  if (existing) _targetingLineContainer.removeChild(existing);
-
-  const graphics = new PIXI.Graphics();
-  graphics.name = `line-${userToken.id}-${targetToken.id}`;
+  // Clear this specific line
+  graphics.clear();
 
   const startX = userToken.center.x;
   const startY = userToken.center.y;
   const endX = targetToken.center.x;
   const endY = targetToken.center.y;
+  
+  console.log(`RNK™ Illumination | Line coords: (${startX}, ${startY}) to (${endX}, ${endY})`);
 
   const colorValue = Color.from(color).valueOf();
+  console.log(`RNK™ Illumination | Line color: ${color} = 0x${colorValue.toString(16)}`);
 
   // Calculate distance
   const pixelDistance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
@@ -267,10 +326,12 @@ function drawTargetingLine(userToken, targetToken, color) {
   const unitDistance = gridDistance * (canvas.scene.grid.distance || 5);
   const units = canvas.scene.grid.units || 'ft';
 
-  // Draw line
-  graphics.lineStyle(3, colorValue, 1);
+  // Draw line with user's color
+  graphics.lineStyle(4, colorValue, 1);
   graphics.moveTo(startX, startY);
   graphics.lineTo(endX, endY);
+  
+  console.log(`RNK™ Illumination | Line drawn from (${startX},${startY}) to (${endX},${endY}) with color ${color}`);
 
   // Draw measurement markers
   const markerInterval = 5; // feet
@@ -289,20 +350,35 @@ function drawTargetingLine(userToken, targetToken, color) {
       const markerX = startX + unitVectorX * pixelDistance;
       const markerY = startY + unitVectorY * pixelDistance;
 
-      // Draw marker dot
-      graphics.lineStyle(0);
-      graphics.beginFill(colorValue, 0.8);
-      graphics.drawCircle(markerX, markerY, 3);
-      graphics.endFill();
+      // Draw icon symbol if provided
+      if (symbol) {
+        const iconText = new PIXI.Text(symbol, {
+          fontFamily: 'Arial',
+          fontSize: 20,
+          fill: colorValue,
+          align: 'center',
+          stroke: 0x000000,
+          strokeThickness: 2
+        });
+        iconText.anchor.set(0.5, 0.5);
+        iconText.position.set(markerX, markerY);
+        graphics.addChild(iconText);
+      } else {
+        // Fallback to dot if no symbol
+        graphics.lineStyle(0);
+        graphics.beginFill(colorValue, 0.8);
+        graphics.drawCircle(markerX, markerY, 5);
+        graphics.endFill();
+      }
 
       // Draw distance label
       const text = new PIXI.Text(`${distance}${units}`, {
         fontFamily: 'Arial',
-        fontSize: 12,
-        fill: colorValue,
+        fontSize: 14,
+        fill: 0xFFFFFF,
         align: 'center',
         stroke: 0x000000,
-        strokeThickness: 2
+        strokeThickness: 3
       });
       text.anchor.set(0.5, 0.5);
       text.position.set(markerX, markerY - 15);
@@ -329,28 +405,45 @@ function drawTargetingLine(userToken, targetToken, color) {
   );
   graphics.lineTo(endX, endY);
   graphics.endFill();
-
-  _targetingLineContainer.addChild(graphics);
+  
+  console.log(`RNK™ Illumination | Line complete with ${numMarkers} markers`);
 }
 
 /**
- * Remove targeting line
+ * Remove targeting line between two tokens
  * @param {Token} userToken - The user's token
  * @param {Token} targetToken - The targeted token
  */
 function removeTargetingLine(userToken, targetToken) {
-  if (!_targetingLineContainer) return;
-  const existing = _targetingLineContainer.children.find(c => c.name === `line-${userToken.id}-${targetToken.id}`);
-  if (existing) _targetingLineContainer.removeChild(existing);
+  const userId = userToken.actor?.id || userToken.id;
+  const targetId = targetToken.id;
+  
+  if (_targetingLines.has(userId)) {
+    const userLines = _targetingLines.get(userId);
+    if (userLines.has(targetId)) {
+      const graphics = userLines.get(targetId);
+      graphics.destroy();
+      userLines.delete(targetId);
+      console.log(`RNK™ Illumination | Targeting line removed for ${userId} -> ${targetId}`);
+      
+      // Clean up empty maps
+      if (userLines.size === 0) {
+        _targetingLines.delete(userId);
+      }
+    }
+  }
 }
 
 /**
  * Clear all targeting lines
  */
 function clearTargetingLines() {
-  if (_targetingLineContainer) {
-    _targetingLineContainer.removeChildren();
-  }
+  _targetingLines.forEach((userLines) => {
+    userLines.forEach((graphics) => {
+      graphics.destroy();
+    });
+  });
+  _targetingLines.clear();
 }
 
 // Global exposure
