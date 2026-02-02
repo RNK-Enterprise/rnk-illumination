@@ -142,48 +142,22 @@ Hooks.on('canvasReady', () => {
 });
 
 Hooks.on('targetToken', (user, token, isTargeted) => {
-  console.log('RNK™ Illumination | ========== ALL TOKENS ON SCENE ==========');
-  canvas.tokens.placeables.forEach(t => {
-    console.log(`  - ${t.name} (ID: ${t.id}) Owner: ${t.actor?.name}`);
-  });
-  console.log('RNK™ Illumination | =========================================');
-  
-  console.log('RNK™ Illumination | targetToken hook fired!', { 
-    user: user?.name, 
-    token: token?.name,
-    tokenId: token?.id,
-    isTargeted 
-  });
-  
   setTimeout(() => {
     refreshTokenIllumination(token);
     if (user) {
-      console.log('RNK™ Illumination | Controlled tokens:', canvas.tokens.controlled.map(t => `${t.name} (${t.id})`));
-      console.log('RNK™ Illumination | Looking for user token for:', user.name);
       const userToken = getUserToken(user);
-      console.log('RNK™ Illumination | User token found:', userToken?.name, 'ID:', userToken?.id);
-      console.log('RNK™ Illumination | Target token:', token?.name, 'ID:', token?.id);
-      
       if (userToken) {
         refreshTokenIllumination(userToken);
         
         // Don't draw line to self
-        if (userToken.id === token.id) {
-          console.log('RNK™ Illumination | Cannot draw line to self, skipping');
-          return;
-        }
+        if (userToken.id === token.id) return;
         
-        // Draw targeting line if token is targeted
+        const settings = getUserSettings(user.id);
         if (isTargeted) {
-          console.log('RNK™ Illumination | Token IS targeted, drawing line');
-          const settings = getUserSettings(user.id);
-          drawTargetingLine(userToken, token, settings.color, settings.symbol);
+          drawTargetingLine(user, token, settings.color, settings.symbol);
         } else {
-          console.log('RNK™ Illumination | Token NOT targeted, removing line');
-          removeTargetingLine(userToken, token);
+          removeTargetingLine(user, token);
         }
-      } else {
-        console.log('RNK™ Illumination | No user token found - cannot draw line');
       }
     }
   }, 50);
@@ -197,12 +171,20 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
   if (changes.actorLink || changes.actorId || changes.disposition) {
     if (tokenDoc.object) refreshTokenIllumination(tokenDoc.object);
   }
+  
+  // Update targeting lines when tokens move
+  if ("x" in changes || "y" in changes || "elevation" in changes) {
+    if (tokenDoc.object) {
+      updateTokenTargetingLines(tokenDoc.object);
+    }
+  }
 });
 
 Hooks.on('deleteToken', (tokenDoc) => {
   if (tokenDoc.object) {
     removeEffect(tokenDoc.object);
     hideTargetingIndicator(tokenDoc.object);
+    clearTargetingLinesForToken(tokenDoc.object);
   }
 });
 
@@ -290,35 +272,35 @@ function getTargetingLineGraphics(userId, targetId) {
 
 /**
  * Draw targeting line from user token to target
- * @param {Token} userToken - The user's token
+ * @param {User} user - The user doing the targeting
  * @param {Token} targetToken - The targeted token
  * @param {string} color - The color for the line
  * @param {string} symbol - The symbol/icon for markers
  */
-function drawTargetingLine(userToken, targetToken, color, symbol) {
-  if (!userToken || !targetToken || !canvas) {
-    console.log('RNK™ Illumination | Cannot draw line - missing token or canvas');
-    return;
-  }
+function drawTargetingLine(user, targetToken, color, symbol) {
+  if (!user || !targetToken || !canvas?.ready) return;
   
-  const userId = userToken.actor?.id || userToken.id;
+  const userToken = getUserToken(user);
+  if (!userToken) return;
+  
+  const userId = user.id;
   const targetId = targetToken.id;
   const graphics = getTargetingLineGraphics(userId, targetId);
   
-  console.log(`RNK™ Illumination | Drawing targeting line from ${userToken.name} to ${targetToken.name} with color ${color}`);
-
-  // Clear this specific line
+  // Clear previous drawings and remove all children (text/icons)
   graphics.clear();
+  if (graphics.children.length > 0) {
+    for (let i = graphics.children.length - 1; i >= 0; i--) {
+      graphics.children[i].destroy();
+    }
+  }
 
   const startX = userToken.center.x;
   const startY = userToken.center.y;
   const endX = targetToken.center.x;
   const endY = targetToken.center.y;
   
-  console.log(`RNK™ Illumination | Line coords: (${startX}, ${startY}) to (${endX}, ${endY})`);
-
   const colorValue = Color.from(color).valueOf();
-  console.log(`RNK™ Illumination | Line color: ${color} = 0x${colorValue.toString(16)}`);
 
   // Calculate distance
   const pixelDistance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
@@ -331,8 +313,6 @@ function drawTargetingLine(userToken, targetToken, color, symbol) {
   graphics.moveTo(startX, startY);
   graphics.lineTo(endX, endY);
   
-  console.log(`RNK™ Illumination | Line drawn from (${startX},${startY}) to (${endX},${endY}) with color ${color}`);
-
   // Draw measurement markers
   const markerInterval = 5; // feet
   const numMarkers = Math.floor(unitDistance / markerInterval);
@@ -346,9 +326,9 @@ function drawTargetingLine(userToken, targetToken, color, symbol) {
 
     for (let i = 1; i <= numMarkers; i++) {
       const distance = i * markerInterval;
-      const pixelDistance = (distance / (canvas.scene.grid.distance || 5)) * canvas.grid.size;
-      const markerX = startX + unitVectorX * pixelDistance;
-      const markerY = startY + unitVectorY * pixelDistance;
+      const pixelDist = (distance / (canvas.scene.grid.distance || 5)) * canvas.grid.size;
+      const markerX = startX + unitVectorX * pixelDist;
+      const markerY = startY + unitVectorY * pixelDist;
 
       // Draw icon symbol if provided
       if (symbol) {
@@ -391,7 +371,6 @@ function drawTargetingLine(userToken, targetToken, color, symbol) {
   const arrowLength = 15;
   const arrowAngle = Math.PI / 6; // 30 degrees
 
-  // Arrowhead at end
   graphics.lineStyle(0);
   graphics.beginFill(colorValue, 1);
   graphics.moveTo(endX, endY);
@@ -405,33 +384,84 @@ function drawTargetingLine(userToken, targetToken, color, symbol) {
   );
   graphics.lineTo(endX, endY);
   graphics.endFill();
-  
-  console.log(`RNK™ Illumination | Line complete with ${numMarkers} markers`);
 }
 
 /**
  * Remove targeting line between two tokens
- * @param {Token} userToken - The user's token
+ * @param {User} user - The user who was targeting
  * @param {Token} targetToken - The targeted token
  */
-function removeTargetingLine(userToken, targetToken) {
-  const userId = userToken.actor?.id || userToken.id;
+function removeTargetingLine(user, targetToken) {
+  if (!user || !targetToken) return;
+  const userId = user.id;
   const targetId = targetToken.id;
   
   if (_targetingLines.has(userId)) {
     const userLines = _targetingLines.get(userId);
     if (userLines.has(targetId)) {
       const graphics = userLines.get(targetId);
-      graphics.destroy();
+      if (!graphics.destroyed) graphics.destroy({ children: true });
       userLines.delete(targetId);
-      console.log(`RNK™ Illumination | Targeting line removed for ${userId} -> ${targetId}`);
       
-      // Clean up empty maps
       if (userLines.size === 0) {
         _targetingLines.delete(userId);
       }
     }
   }
+}
+
+/**
+ * Update all targeting lines associated with a token (as source or target)
+ */
+function updateTokenTargetingLines(token) {
+  if (!token || !canvas?.ready) return;
+
+  // 1. Update lines where this token is the SOURCE (user token)
+  game.users.forEach(user => {
+    const userToken = getUserToken(user);
+    if (userToken === token) {
+      user.targets.forEach(target => {
+        const settings = getUserSettings(user.id);
+        drawTargetingLine(user, target, settings.color, settings.symbol);
+      });
+    }
+  });
+
+  // 2. Update lines where this token is the TARGET
+  game.users.forEach(user => {
+    if (user.targets.has(token)) {
+      const settings = getUserSettings(user.id);
+      drawTargetingLine(user, token, settings.color, settings.symbol);
+    }
+  });
+}
+
+/**
+ * Cleanup targeting lines when a token is deleted
+ */
+function clearTargetingLinesForToken(token) {
+  if (!token) return;
+  const tokenId = token.id;
+  
+  // Remove lines where this token was the target
+  _targetingLines.forEach((userLines, userId) => {
+    if (userLines.has(tokenId)) {
+      const graphics = userLines.get(tokenId);
+      if (!graphics.destroyed) graphics.destroy({ children: true });
+      userLines.delete(tokenId);
+    }
+    if (userLines.size === 0) _targetingLines.delete(userId);
+  });
+  
+  // Remove lines where this token was the source (user's character token)
+  game.users.forEach(user => {
+    const userToken = getUserToken(user);
+    if (userToken === token && _targetingLines.has(user.id)) {
+      const userLines = _targetingLines.get(user.id);
+      userLines.forEach(g => { if (!g.destroyed) g.destroy({ children: true }); });
+      _targetingLines.delete(user.id);
+    }
+  });
 }
 
 /**
