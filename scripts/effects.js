@@ -72,11 +72,14 @@ export function createFallbackFilter(color, strength = 1) {
  * Apply illumination effect to a token
  * @param {Token} token - The token to apply effect to
  * @param {Object} settings - Settings with color and effect type
+ * @param {boolean} [shouldPulsate=null] - Whether the effect should pulsate
  */
-export function applyEffect(token, settings) {
+export function applyEffect(token, settings, shouldPulsate = null) {
   if (!token) return;
   const sprite = token.mesh || token.icon;
   if (!sprite) return;
+
+  const pulsate = (shouldPulsate !== null) ? shouldPulsate : token.isTargeted;
 
   removeEffect(token);
 
@@ -134,58 +137,14 @@ export function applyEffect(token, settings) {
     existingFilters.push(filter);
     sprite.filters = existingFilters;
 
-    // Add pulsating animation if token is targeted
-    if (token.isTargeted) {
+    // Apply pulsation if token is targeted
+    if (pulsate) {
       startPulsatingAnimation(filter, settings.effect);
+    } else {
+      stopPulsatingAnimation(filter);
     }
   } catch (err) {
     console.error("RNK™ Illumination | Failed to apply effect", err);
-  }
-}
-
-/**
- * Start pulsating animation on the filter
- * @param {PIXI.Filter} filter - The filter to animate
- * @param {string} effectType - The effect type
- */
-export function startPulsatingAnimation(filter, effectType) {
-  if (filter._pulsatingTween) return; // Already animating
-
-  let targetProperty, minValue, maxValue;
-
-  if (effectType === 'glow' && filter.distance !== undefined) {
-    targetProperty = 'distance';
-    minValue = 5;
-    maxValue = 15;
-  } else if (effectType === 'outline' && filter.thickness !== undefined) {
-    targetProperty = 'thickness';
-    minValue = 1;
-    maxValue = 5;
-  } else if (filter.outerStrength !== undefined) {
-    targetProperty = 'outerStrength';
-    minValue = 0.5;
-    maxValue = 2.5;
-  } else {
-    return; // No animatable property
-  }
-
-  filter._pulsatingTween = gsap.to(filter, {
-    [targetProperty]: maxValue,
-    duration: 0.5,
-    yoyo: true,
-    repeat: -1,
-    ease: "power1.inOut"
-  });
-}
-
-/**
- * Stop pulsating animation on the filter
- * @param {PIXI.Filter} filter - The filter to stop animating
- */
-export function stopPulsatingAnimation(filter) {
-  if (filter._pulsatingTween) {
-    filter._pulsatingTween.kill();
-    delete filter._pulsatingTween;
   }
 }
 
@@ -199,15 +158,75 @@ export function removeEffect(token) {
   if (!sprite || !sprite.filters) return;
 
   try {
-    const filtered = sprite.filters.filter(f => {
-      if (f._rnkIllumination) {
-        stopPulsatingAnimation(f);
-        return false;
-      }
-      return true;
-    });
+    // Stop any pulsating animations
+    if (sprite.filters) {
+      sprite.filters.forEach(f => {
+        if (f._rnkIllumination) {
+          stopPulsatingAnimation(f);
+        }
+      });
+    }
+    
+    const filtered = sprite.filters.filter(f => !f._rnkIllumination);
     sprite.filters = filtered.length > 0 ? filtered : null;
   } catch (err) {
     console.error("RNK™ Illumination | Failed to remove effect", err);
+  }
+}
+
+/**
+ * Start pulsating animation on the filter
+ * @param {PIXI.Filter} filter - The filter to animate
+ * @param {string} effectType - The effect type
+ */
+export function startPulsatingAnimation(filter, effectType) {
+  if (filter._pulsatingTween) return;
+
+  let targetProperty, minValue, maxValue;
+
+  if (effectType === 'glow' || effectType === 'neon') {
+    targetProperty = 'distance';
+    minValue = effectType === 'glow' ? 5 : 10;
+    maxValue = effectType === 'glow' ? 20 : 35;
+  } else if (effectType === 'outline') {
+    targetProperty = 'thickness';
+    minValue = 1;
+    maxValue = 6;
+  } else {
+    targetProperty = 'alpha';
+    minValue = 0.4;
+    maxValue = 1.0;
+  }
+
+  if (filter[targetProperty] === undefined) {
+    if (filter.outerStrength !== undefined) targetProperty = 'outerStrength';
+    else if (filter.blur !== undefined) targetProperty = 'blur';
+    else return;
+  }
+
+  // Use global GSAP if available
+  const gsapLib = globalThis.gsap || (typeof gsap !== 'undefined' ? gsap : null);
+  if (!gsapLib) return;
+
+  filter._pulsatingTween = gsapLib.to(filter, {
+    [targetProperty]: maxValue,
+    duration: 0.8,
+    yoyo: true,
+    repeat: -1,
+    ease: "power2.inOut"
+  });
+}
+
+/**
+ * Stop pulsating animation on the filter
+ * @param {PIXI.Filter} filter - The filter to stop animating
+ */
+export function stopPulsatingAnimation(filter) {
+  if (filter._pulsatingTween) {
+    const gsapLib = globalThis.gsap || (typeof gsap !== 'undefined' ? gsap : null);
+    if (gsapLib) {
+      gsapLib.killTweensOf(filter);
+    }
+    filter._pulsatingTween = null;
   }
 }
