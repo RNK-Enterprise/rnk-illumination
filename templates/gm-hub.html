@@ -13,7 +13,7 @@
       <input type="color" name="gmColor" value="{{gmSettings.color}}" title="Illumination Color">
       <select name="gmEffect" title="Effect Style">
         {{#each effects}}
-        <option value="{{this}}" {{#if (eq this ../gmSettings.effect)}}selected{{/if}}>{{this}}</option>
+        <option value="{{this}}" {{#if (eq this ../gmSettings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}None (Disabled){{else}}{{this}}{{/if}}</option>
         {{/each}}
       </select>
       <select name="gmSymbol" title="Target Symbol">
@@ -43,7 +43,7 @@
       <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
       <select name="{{this.id}}_effect" title="Effect Style">
         {{#each ../effects}}
-        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{this}}</option>
+        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}None (Disabled){{else}}{{this}}{{/if}}</option>
         {{/each}}
       </select>
       <select name="{{this.id}}_symbol" title="Target Symbol">

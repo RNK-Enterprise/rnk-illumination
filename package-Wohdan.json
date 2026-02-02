@@ -1,18 +1,9 @@
 {
   "name": "rnk-illumination",
-  "version": "2.2.0",
+  "version": "1.2.13",
   "description": "RNK™ Illumination Module",
-  "main": "scripts/rnk-illumination-Wohdan.js",
+  "main": "scripts/rnk-illumination.js",
   "type": "module",
-  "files": [
-    "scripts/",
-    "styles/",
-    "templates/",
-    "lang/",
-    "module.json",
-    "LICENSE",
-    "README.md"
-  ],
   "scripts": {
     "test": "vitest run --coverage"
   },
