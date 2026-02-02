@@ -14,8 +14,7 @@
   ],
   "esmodules": ["scripts/rnk-illumination.js"],
   "styles": ["styles/rnk-illumination.css"],
-  "manifest": "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/main/module.json",
-  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/v1.2.18/rnk-illumination-1.2.18.zip",
+  "manifest": "https://r2.foundryvtt.com/packages-public/rnk-illumination/module.json",
   "languages": [
     {
       "lang": "en",
