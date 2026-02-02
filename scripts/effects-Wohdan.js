@@ -79,104 +79,82 @@ export function applyEffect(token, settings, shouldPulsate = null) {
   const sprite = token.mesh || token.icon;
   if (!sprite) return;
 
-  // If effect is 'none', don't apply any effect
-  if (settings.effect === 'none') {
-    removeEffect(token);
-    return;
-  }
-
+  const color = parseColor(settings.color);
+  let filter = sprite.filters?.find(f => f._rnkIllumination);
   const pulsate = (shouldPulsate !== null) ? shouldPulsate : token.isTargeted;
 
-  removeEffect(token);
+  // If effect type changed, remove old one
+  if (filter && filter._effectType !== settings.effect) {
+    removeEffect(token);
+    filter = null;
+  }
 
   try {
-    const color = parseColor(settings.color);
-    let filter;
+    if (!filter) {
+      const GlowFilter = getFilterClass('GlowFilter');
+      const OutlineFilter = getFilterClass('OutlineFilter');
+      const DropShadowFilter = getFilterClass('DropShadowFilter');
 
-    const GlowFilter = getFilterClass('GlowFilter');
-    const OutlineFilter = getFilterClass('OutlineFilter');
-    const DropShadowFilter = getFilterClass('DropShadowFilter');
+      switch (settings.effect) {
+        case 'glow':
+          if (GlowFilter) {
+            filter = new GlowFilter({ distance: 10, outerStrength: 1.5, innerStrength: 0.5, color: color });
+          } else {
+            filter = createFallbackFilter(color, 1);
+          }
+          break;
+        case 'outline':
+          if (OutlineFilter) {
+            filter = new OutlineFilter(1.5, color, 0.3);
+          } else if (GlowFilter) {
+            filter = new GlowFilter({ distance: 3, outerStrength: 3, innerStrength: 0, color: color });
+          } else {
+            filter = createFallbackFilter(color, 1.5);
+          }
+          break;
+        case 'shadow':
+          if (DropShadowFilter) {
+            filter = new DropShadowFilter({ offset: { x: 3, y: 3 }, alpha: 0.6, color: color });
+          } else {
+            filter = createFallbackFilter(color, 0.5);
+          }
+          break;
+        case 'neon':
+          if (GlowFilter) {
+            filter = new GlowFilter({ distance: 8, outerStrength: 2.5, innerStrength: 0.3, color: color });
+          } else {
+            filter = createFallbackFilter(color, 2);
+          }
+          break;
+        default:
+          if (GlowFilter) {
+            filter = new GlowFilter({ distance: 10, outerStrength: 1.5, color: color });
+          } else {
+            filter = createFallbackFilter(color, 1);
+          }
+      }
 
-    switch (settings.effect) {
-      case 'glow':
-        if (GlowFilter) {
-          filter = new GlowFilter({ distance: 10, outerStrength: 1.5, innerStrength: 0.5, color: color });
-        } else {
-          filter = createFallbackFilter(color, 1);
-        }
-        break;
-      case 'outline':
-        if (OutlineFilter) {
-          filter = new OutlineFilter(1.5, color, 0.3);
-        } else if (GlowFilter) {
-          filter = new GlowFilter({ distance: 3, outerStrength: 3, innerStrength: 0, color: color });
-        } else {
-          filter = createFallbackFilter(color, 1.5);
-        }
-        break;
-      case 'shadow':
-        if (DropShadowFilter) {
-          filter = new DropShadowFilter({ offset: { x: 3, y: 3 }, alpha: 0.6, color: color });
-        } else {
-          filter = createFallbackFilter(color, 0.5);
-        }
-        break;
-      case 'neon':
-        if (GlowFilter) {
-          filter = new GlowFilter({ distance: 8, outerStrength: 2.5, innerStrength: 0.3, color: color });
-        } else {
-          filter = createFallbackFilter(color, 2);
-        }
-        break;
-      default:
-        if (GlowFilter) {
-          filter = new GlowFilter({ distance: 10, outerStrength: 1.5, color: color });
-        } else {
-          filter = createFallbackFilter(color, 1);
-        }
+      if (filter) {
+        filter._rnkIllumination = true;
+        filter._effectType = settings.effect;
+        const existingFilters = sprite.filters ? [...sprite.filters] : [];
+        existingFilters.push(filter);
+        sprite.filters = existingFilters;
+      }
+    } else {
+      // Update color on existing filter
+      if (filter.color !== undefined) filter.color = color;
     }
 
-    if (!filter) return;
-    filter._rnkIllumination = true;
-
-    const existingFilters = sprite.filters ? [...sprite.filters] : [];
-    existingFilters.push(filter);
-    sprite.filters = existingFilters;
-
-    // Apply pulsation if token is targeted
-    if (pulsate) {
-      startPulsatingAnimation(filter, settings.effect);
-    } else {
-      stopPulsatingAnimation(filter);
+    if (filter) {
+      if (pulsate) {
+        startPulsatingAnimation(filter, settings.effect);
+      } else {
+        stopPulsatingAnimation(filter);
+      }
     }
   } catch (err) {
     console.error("RNK™ Illumination | Failed to apply effect", err);
-  }
-}
-
-/**
- * Remove illumination effect from a token
- * @param {Token} token - The token to remove effect from
- */
-export function removeEffect(token) {
-  if (!token) return;
-  const sprite = token.mesh || token.icon;
-  if (!sprite || !sprite.filters) return;
-
-  try {
-    // Stop any pulsating animations
-    if (sprite.filters) {
-      sprite.filters.forEach(f => {
-        if (f._rnkIllumination) {
-          stopPulsatingAnimation(f);
-        }
-      });
-    }
-    
-    const filtered = sprite.filters.filter(f => !f._rnkIllumination);
-    sprite.filters = filtered.length > 0 ? filtered : null;
-  } catch (err) {
-    console.error("RNK™ Illumination | Failed to remove effect", err);
   }
 }
 
@@ -189,6 +167,7 @@ export function startPulsatingAnimation(filter, effectType) {
   if (filter._pulsatingTween) return;
 
   let targetProperty, minValue, maxValue;
+  const isV13 = game.release?.generation >= 13;
 
   if (effectType === 'glow' || effectType === 'neon') {
     targetProperty = 'distance';
@@ -219,7 +198,7 @@ export function startPulsatingAnimation(filter, effectType) {
     duration: 0.8,
     yoyo: true,
     repeat: -1,
-    ease: "power2.inOut"
+    ease: "sine.inOut"
   });
 }
 
@@ -229,10 +208,30 @@ export function startPulsatingAnimation(filter, effectType) {
  */
 export function stopPulsatingAnimation(filter) {
   if (filter._pulsatingTween) {
-    const gsapLib = globalThis.gsap || (typeof gsap !== 'undefined' ? gsap : null);
-    if (gsapLib) {
-      gsapLib.killTweensOf(filter);
-    }
-    filter._pulsatingTween = null;
+    filter._pulsatingTween.kill();
+    delete filter._pulsatingTween;
+  }
+}
+
+/**
+ * Remove illumination effect from a token
+ * @param {Token} token - The token to remove effect from
+ */
+export function removeEffect(token) {
+  if (!token) return;
+  const sprite = token.mesh || token.icon;
+  if (!sprite || !sprite.filters) return;
+
+  try {
+    const filtered = sprite.filters.filter(f => {
+      if (f._rnkIllumination) {
+        stopPulsatingAnimation(f);
+        return false;
+      }
+      return true;
+    });
+    sprite.filters = filtered.length > 0 ? filtered : null;
+  } catch (err) {
+    console.error("RNK™ Illumination | Failed to remove effect", err);
   }
 }
