@@ -1,4 +1,4 @@
-
+{
   "id": "rnk-illumination",
   "title": "RNK Illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
@@ -8,18 +8,12 @@
     "verified": "13"
   },
   "authors": [
-    {
-      "name": "Asgard Innovations"
-    }
+    { "name": "Asgard Innovations" }
   ],
   "esmodules": ["scripts/rnk-illumination.js"],
   "styles": ["styles/rnk-illumination.css"],
   "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    }
+    { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
   "manifest": "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/main/module.json",
