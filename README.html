@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RNK™ Illumination</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #555;
+            margin-top: 20px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Courier New", Courier, monospace;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .note {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>RNK™ Illumination</h1>
+
+    <p>An advanced Foundry VTT module providing custom underglow illumination effects for tokens with player/GM hubs for configuration.</p>
+    <p><strong>Compatible with Foundry VTT v11, v12, and v13</strong></p>
+
+    <h2>Features</h2>
+
+    <ul>
+        <li><strong>GM Hub:</strong> GM can configure their settings and view/override all player settings (players do not have a separate hub)</li>
+        <li><strong>Heavy Underglow Effects:</strong> Custom PIXI filters for stunning visual effects (glow, outline, shadow, neon)</li>
+        <li><strong>Automatic Application:</strong> Illuminates controlled tokens and targets with radiating underglow</li>
+        <li><strong>Standard Targeting:</strong> Right-click to target tokens (compatible across all Foundry versions)</li>
+        <li><strong>Universal Visibility:</strong> Effects are visible to all players for clear targeting indication</li>
+        <li><strong>System Agnostic:</strong> Works with any game system</li>
+        <li><strong>Lang Support:</strong> Upon request per user</li>
+    </ul>
+
+    <h2>Effects Available</h2>
+
+    <ul>
+        <li><strong>Glow:</strong> Radiating colored glow around tokens</li>
+        <li><strong>Outline:</strong> Colored outline effect</li>
+        <li><strong>Shadow:</strong> Drop shadow with color tint</li>
+        <li><strong>Neon:</strong> Intense glowing effect</li>
+    </ul>
+
+    <h2>Installation</h2>
+
+    <ol>
+        <li>Download or clone this repository.</li>
+        <li>Copy the <code>rnk-illumination</code> folder into your Foundry VTT <code>Data/modules</code> directory.</li>
+        <li>Restart Foundry VTT or refresh your browser.</li>
+        <li>Enable the module in the Module Management menu.</li>
+    </ol>
+
+    <h2>Usage</h2>
+
+    <h3>Scene Control Button</h3>
+    <ul>
+        <li>Look for the lightbulb icon in the scene controls toolbar</li>
+        <li>Click it to open your illumination hub instantly</li>
+    </ul>
+
+    <h3>Macro for Hotkey</h3>
+    <p>Create a new macro in Foundry and paste this script:</p>
+
+    <div class="note">
+        <strong>Note:</strong> Only the GM can open the Illumination Hub; players cannot open a hub.
+    </div>
+
+    <p><strong>For GM:</strong></p>
+    <pre><code>new RNKGMHub().render(true);</code></pre>
+
+    <p>Assign a hotkey to the macro for quick access!</p>
+
+    <h3>Players</h3>
+    <p>Players do not have a hub; illumination settings are controlled by the GM via the GM Hub.</p>
+
+    <h3>For GM</h3>
+    <ol>
+        <li>Open GM hub via scene control button or macro</li>
+        <li>Configure your own settings</li>
+        <li>View and modify settings for all players</li>
+        <li>Control tokens or target to apply effects</li>
+    </ol>
+
+    <h2>Targeting</h2>
+    <ul>
+        <li><strong>Left-Click:</strong> Control tokens</li>
+        <li><strong>Right-Click:</strong> Target/untarget tokens (default Foundry behavior)</li>
+        <li>Effects automatically apply to controlled tokens and targets</li>
+    </ul>
+
+    <h2>Notes</h2>
+
+    <ul>
+        <li>Effects use PIXI filters for custom underglow rendering</li>
+        <li>Settings are stored per user and persist across sessions</li>
+        <li>GM can override any player's settings</li>
+        <li>Effects are applied client-side but visible to all players</li>
+        <li>Access hubs via scene control button or create macros for hotkeys</li>
+    </ul>
+
+    <h2>Release Notes v2.3.0</h2>
+
+    <ul>
+        <li><strong>Multiple Targeting Lines:</strong> Support for simultaneous targeting of multiple tokens</li>
+        <li><strong>User Color Lines:</strong> Targeting lines now match each user's configured hub color</li>
+        <li><strong>Symbol Markers:</strong> Distance markers display user's configured symbol/icon</li>
+        <li><strong>Pulsating Targets:</strong> Targeted tokens now pulsate with their illumination effect</li>
+        <li><strong>Enhanced Targeting:</strong> Improved targeting system with visual feedback</li>
+    </ul>
+
+    <h2>Release Notes v2.2.0</h2>
+
+    <ul>
+        <li><strong>Targeting Lines:</strong> Visual measurement lines between user tokens and targets</li>
+        <li><strong>Distance Markers:</strong> Automatic distance markers every 5 feet along targeting lines</li>
+        <li><strong>Arrow Indicators:</strong> Directional arrows showing targeting direction</li>
+        <li><strong>Canvas Integration:</strong> Lines render on canvas controls layer for proper visibility</li>
+    </ul>
+
+    <h2>Release Notes v1.0.0</h2>
+
+    <ul>
+        <li>Initial release of RNK™ Illumination</li>
+        <li>Advanced token illumination with custom underglow effects</li>
+        <li>GM configuration hub with player management</li>
+        <li>12 targeting symbols and 4 effect types</li>
+        <li>Full compatibility with Foundry VTT v11-13</li>
+        <li>System-agnostic design</li>
+    </ul>
+</body>
+</html>
