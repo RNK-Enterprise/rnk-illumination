@@ -1,9 +1,0 @@
-LICENSE
-README.md
-RELEASE.md
-module.json
-package.json
-lang
-scripts
-styles
-templates
