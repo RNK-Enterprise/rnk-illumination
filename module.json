@@ -30,5 +30,5 @@
     "download":  "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/2.4.3/rnk-illumination-2.4.3.zip",
     "readme":  "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/main/README.md",
     "license":  "MIT",
-    "protected":  true
+    "protected":  false
 }
