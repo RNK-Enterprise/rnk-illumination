@@ -1,0 +1,19 @@
+{
+  "name": "rnk-illumination",
+  "version": "2.4.5",
+  "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
+  "type": "module",
+  "main": "scripts/rnk-illumination.js",
+  "keywords": [
+    "foundry",
+    "foundry-vtt",
+    "module",
+    "v13"
+  ],
+  "author": "RNK Enterprises",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RNK-Enterprise/rnk-illumination"
+  }
+}
