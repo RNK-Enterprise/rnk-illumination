@@ -1,8 +1,8 @@
 /**
- * RNK™ Illumination - Hub Interface
+ * RNKâ„¢ Illumination - Hub Interface
  */
 
-import { AVAILABLE_EFFECTS, AVAILABLE_SYMBOLS, DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
+import { AVAILABLE_EFFECTS, AVAILABLE_RANGES, AVAILABLE_SYMBOLS, DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
 import { sanitizeColor } from './effects.js';
 import { isValidSymbol, sanitizeSymbol } from './targeting.js';
 
@@ -18,10 +18,10 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: 'rnk-gm-hub',
-    tag: 'form',
+    tag: 'div',
     window: {
       icon: 'fa-solid fa-crown',
-      title: 'RNK™ GM Illumination Hub',
+      title: 'RNKâ„¢ GM Illumination Hub',
       resizable: true,
       minimizable: true
     },
@@ -30,7 +30,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       height: 500
     },
     form: {
-      handler: RNKGMHub.#onSubmit,
+      handler: RNKGMHub.prototype._onSubmit,
       closeOnSubmit: true
     }
   };
@@ -55,7 +55,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       return {
         users: [],
         gmSettings: { ...DEFAULT_SETTINGS },
-        effects: AVAILABLE_EFFECTS
+        effects: AVAILABLE_EFFECTS,
+        symbols: AVAILABLE_SYMBOLS
       };
     }
 
@@ -71,6 +72,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           color: sanitizeColor(settings.color),
           effect: settings.effect || DEFAULT_SETTINGS.effect,
           symbol: sanitizeSymbol(settings.symbol),
+          intensity: settings.intensity || DEFAULT_SETTINGS.intensity,
+          range: settings.range || DEFAULT_SETTINGS.range,
           customSymbol: settings.customSymbol || ''
         }
       };
@@ -89,6 +92,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         color: sanitizeColor(gmSettings.color),
         effect: gmSettings.effect || DEFAULT_SETTINGS.effect,
         symbol: sanitizeSymbol(gmSettings.symbol),
+        intensity: gmSettings.intensity || DEFAULT_SETTINGS.intensity,
+        range: gmSettings.range || DEFAULT_SETTINGS.range,
         customSymbol: gmSettings.customSymbol || ''
       },
       effects: AVAILABLE_EFFECTS,
@@ -121,45 +126,69 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           $input.val(value).trigger('change');
         }
       } catch (err) {
-        console.error('RNK™ Illumination | Upload handler error', err);
+        console.error('RNKâ„¢ Illumination | Upload handler error', err);
       }
     });
   }
 
-  static async #onSubmit(_event, _form, formData) {
+  async _onSubmit(event, form, formData) {
     if (!game.user?.isGM) {
       ui.notifications.error("Only GMs can modify player settings");
       return;
     }
 
-    const data = formData.object;
+    // Disable the submit button to prevent multiple submissions
+    const submitButton = form?.querySelector('.rnk-illumination-save');
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Saving...';
+    }
+
+    try {
+      const data = formData.object;
     const gmColor = data.gmColor;
     const gmEffect = data.gmEffect;
+    const gmIntensity = parseFloat(data.gmIntensity) || DEFAULT_SETTINGS.intensity;
+    const gmRange = parseInt(data.gmRange) || DEFAULT_SETTINGS.range;
     const gmCustomSymbol = (data.gmCustomSymbol || '').trim();
     let gmSymbol = gmCustomSymbol || data.gmSymbol || DEFAULT_SETTINGS.symbol;
 
     if (!/^#[0-9A-F]{6}$/i.test(gmColor)) return;
     if (!AVAILABLE_EFFECTS.includes(gmEffect)) return;
     if (!isValidSymbol(gmSymbol)) return;
+    if (gmIntensity < 0.1 || gmIntensity > 3.0) return;
+    if (!AVAILABLE_RANGES.includes(gmRange)) return;
 
     try {
-      const gmSettings = { color: gmColor, effect: gmEffect, symbol: gmSymbol };
+      const gmSettings = { 
+        color: gmColor, 
+        effect: gmEffect, 
+        symbol: gmSymbol,
+        intensity: gmIntensity,
+        range: gmRange
+      };
       await game.user.setFlag(MODULE_ID, 'settings', gmSettings);
 
       for (const user of game.users.filter(u => u.id !== game.user.id)) {
         const color = data[`${user.id}_color`];
         const effect = data[`${user.id}_effect`];
+        const intensity = parseFloat(data[`${user.id}_intensity`]) || DEFAULT_SETTINGS.intensity;
+        const range = parseInt(data[`${user.id}_range`]) || DEFAULT_SETTINGS.range;
         const customSymbol = (data[`${user.id}_customSymbol`] || '').trim();
         const symbol = customSymbol || data[`${user.id}_symbol`];
         
         if (!/^#[0-9A-F]{6}$/i.test(color)) continue;
         if (!AVAILABLE_EFFECTS.includes(effect)) continue;
         if (!isValidSymbol(symbol)) continue;
+        if (intensity < 0.1 || intensity > 3.0) continue;
+        if (!AVAILABLE_RANGES.includes(range)) continue;
 
         const settings = {
           color: color,
           effect: effect,
           symbol: symbol,
+          intensity: intensity,
+          range: range,
           customSymbol: customSymbol || ''
         };
         await user.setFlag(MODULE_ID, 'settings', settings);
@@ -170,8 +199,21 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           if (globalThis.refreshAllTokenIllumination) globalThis.refreshAllTokenIllumination();
         } catch (e) {}
       }, 100);
+      // Re-enable the save button
+      const saveButton = this.element?.querySelector('button[type="submit"]');
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Settings";
+      }
     } catch (err) {
-      console.error("RNK™ Illumination | Failed to save settings", err);
+      console.error("RNKâ„¢ Illumination | Failed to save settings", err);
+      ui.notifications.error("Failed to save illumination settings. Check console for details.");
+      // Re-enable the save button on error
+      const saveButton = this.element?.querySelector('button[type="submit"]');
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent = "Save Settings";
+      }
     }
   }
 }
