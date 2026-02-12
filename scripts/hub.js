@@ -18,7 +18,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: 'rnk-gm-hub',
-    tag: 'div',
+    tag: 'form',
     window: {
       icon: 'fa-solid fa-crown',
       title: 'RNK™ GM Illumination Hub',
@@ -30,7 +30,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       height: 500
     },
     form: {
-      handler: RNKGMHub.prototype._onSubmit,
+      handler: this._onSubmit,
+      submitOnChange: false,
       closeOnSubmit: true
     }
   };
@@ -56,7 +57,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         users: [],
         gmSettings: { ...DEFAULT_SETTINGS },
         effects: AVAILABLE_EFFECTS,
-        symbols: AVAILABLE_SYMBOLS
+        symbols: AVAILABLE_SYMBOLS,
+        ranges: AVAILABLE_RANGES
       };
     }
 
@@ -97,12 +99,14 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         customSymbol: gmSettings.customSymbol || ''
       },
       effects: AVAILABLE_EFFECTS,
-      symbols: AVAILABLE_SYMBOLS
+      symbols: AVAILABLE_SYMBOLS,
+      ranges: AVAILABLE_RANGES
     };
   }
 
   activateListeners(html) {
     super.activateListeners?.(html);
+    
     const $btns = html.find('.rnk-upload-btn');
     $btns.on('click', async (ev) => {
       ev.preventDefault();
@@ -131,14 +135,16 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
-  async _onSubmit(event, form, formData) {
+  static async _onSubmit(event, form, formData) {
+    console.log('RNK™ Illumination | Form submitted');
+    
     if (!game.user?.isGM) {
       ui.notifications.error("Only GMs can modify player settings");
       return;
     }
 
     // Disable the submit button to prevent multiple submissions
-    const submitButton = form?.querySelector('.rnk-illumination-save');
+    const submitButton = this.element?.querySelector('.rnk-illumination-save');
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.textContent = 'Saving...';
@@ -146,20 +152,28 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
     try {
       const data = formData.object;
-    const gmColor = data.gmColor;
-    const gmEffect = data.gmEffect;
-    const gmIntensity = parseFloat(data.gmIntensity) || DEFAULT_SETTINGS.intensity;
-    const gmRange = parseInt(data.gmRange) || DEFAULT_SETTINGS.range;
-    const gmCustomSymbol = (data.gmCustomSymbol || '').trim();
-    let gmSymbol = gmCustomSymbol || data.gmSymbol || DEFAULT_SETTINGS.symbol;
+      const gmColor = data.gmColor;
+      const gmEffect = data.gmEffect;
+      const gmIntensity = parseFloat(data.gmIntensity) || DEFAULT_SETTINGS.intensity;
+      const gmRange = parseInt(data.gmRange) || DEFAULT_SETTINGS.range;
+      const gmCustomSymbol = (data.gmCustomSymbol || '').trim();
+      let gmSymbol = gmCustomSymbol || data.gmSymbol || DEFAULT_SETTINGS.symbol;
 
-    if (!/^#[0-9A-F]{6}$/i.test(gmColor)) return;
-    if (!AVAILABLE_EFFECTS.includes(gmEffect)) return;
-    if (!isValidSymbol(gmSymbol)) return;
-    if (gmIntensity < 0.1 || gmIntensity > 3.0) return;
-    if (!AVAILABLE_RANGES.includes(gmRange)) return;
-
-    try {
+      if (!/^#[0-9A-F]{6}$/i.test(gmColor)) {
+        throw new Error("Invalid GM color format");
+      }
+      if (!AVAILABLE_EFFECTS.includes(gmEffect)) {
+        throw new Error("Invalid GM effect");
+      }
+      if (!isValidSymbol(gmSymbol)) {
+        throw new Error("Invalid GM symbol");
+      }
+      if (gmIntensity < 0.1 || gmIntensity > 3.0) {
+        throw new Error("GM intensity must be between 0.1 and 3.0");
+      }
+      if (!AVAILABLE_RANGES.includes(gmRange)) {
+        throw new Error("Invalid GM range");
+      }
       const gmSettings = { 
         color: gmColor, 
         effect: gmEffect, 
@@ -177,11 +191,21 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         const customSymbol = (data[`${user.id}_customSymbol`] || '').trim();
         const symbol = customSymbol || data[`${user.id}_symbol`];
         
-        if (!/^#[0-9A-F]{6}$/i.test(color)) continue;
-        if (!AVAILABLE_EFFECTS.includes(effect)) continue;
-        if (!isValidSymbol(symbol)) continue;
-        if (intensity < 0.1 || intensity > 3.0) continue;
-        if (!AVAILABLE_RANGES.includes(range)) continue;
+        if (!/^#[0-9A-F]{6}$/i.test(color)) {
+          throw new Error(`Invalid color format for user ${user.name}`);
+        }
+        if (!AVAILABLE_EFFECTS.includes(effect)) {
+          throw new Error(`Invalid effect for user ${user.name}`);
+        }
+        if (!isValidSymbol(symbol)) {
+          throw new Error(`Invalid symbol for user ${user.name}`);
+        }
+        if (intensity < 0.1 || intensity > 3.0) {
+          throw new Error(`Intensity out of range for user ${user.name}`);
+        }
+        if (!AVAILABLE_RANGES.includes(range)) {
+          throw new Error(`Invalid range for user ${user.name}`);
+        }
 
         const settings = {
           color: color,
@@ -194,6 +218,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         await user.setFlag(MODULE_ID, 'settings', settings);
       }
       ui.notifications.info("GM and player settings updated");
+      console.log('RNK™ Illumination | Settings saved successfully');
       setTimeout(() => {
         try {
           if (globalThis.refreshAllTokenIllumination) globalThis.refreshAllTokenIllumination();
