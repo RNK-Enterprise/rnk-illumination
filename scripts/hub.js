@@ -1,5 +1,5 @@
 /**
- * RNKâ„¢ Illumination - Hub Interface
+ * RNK™ Illumination - Hub Interface
  */
 
 import { AVAILABLE_EFFECTS, AVAILABLE_RANGES, AVAILABLE_SYMBOLS, DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
@@ -21,7 +21,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     tag: 'div',
     window: {
       icon: 'fa-solid fa-crown',
-      title: 'RNKâ„¢ GM Illumination Hub',
+      title: 'RNK™ GM Illumination Hub',
       resizable: true,
       minimizable: true
     },
@@ -126,7 +126,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           $input.val(value).trigger('change');
         }
       } catch (err) {
-        console.error('RNKâ„¢ Illumination | Upload handler error', err);
+        console.error('RNK™ Illumination | Upload handler error', err);
       }
     });
   }
@@ -206,7 +206,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         saveButton.textContent = "Save Settings";
       }
     } catch (err) {
-      console.error("RNKâ„¢ Illumination | Failed to save settings", err);
+      console.error("RNK™ Illumination | Failed to save settings", err);
       ui.notifications.error("Failed to save illumination settings. Check console for details.");
       // Re-enable the save button on error
       const saveButton = this.element?.querySelector('button[type="submit"]');
