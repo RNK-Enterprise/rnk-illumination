@@ -97,42 +97,60 @@ export function applyEffect(token, settings, shouldPulsate = null) {
     const OutlineFilter = getFilterClass('OutlineFilter');
     const DropShadowFilter = getFilterClass('DropShadowFilter');
 
+    const intensity = parseFloat(settings.intensity) || 1.0;
+    const range = parseInt(settings.range) || 30;
+
     switch (settings.effect) {
       case 'glow':
         if (GlowFilter) {
-          filter = new GlowFilter({ distance: 10, outerStrength: 1.5, innerStrength: 0.5, color: color });
+          filter = new GlowFilter({ 
+            distance: range, 
+            outerStrength: intensity * 1.5, 
+            innerStrength: intensity * 0.5, 
+            color: color 
+          });
         } else {
-          filter = createFallbackFilter(color, 1);
+          filter = createFallbackFilter(color, intensity);
         }
         break;
       case 'outline':
         if (OutlineFilter) {
-          filter = new OutlineFilter(1.5, color, 0.3);
+          filter = new OutlineFilter(intensity * 1.5, color, 0.3);
         } else if (GlowFilter) {
-          filter = new GlowFilter({ distance: 3, outerStrength: 3, innerStrength: 0, color: color });
+          filter = new GlowFilter({ 
+            distance: range / 3, 
+            outerStrength: intensity * 3, 
+            innerStrength: 0, 
+            color: color 
+          });
         } else {
-          filter = createFallbackFilter(color, 1.5);
+          filter = createFallbackFilter(color, intensity * 1.5);
         }
         break;
       case 'shadow':
         if (DropShadowFilter) {
-          filter = new DropShadowFilter({ offset: { x: 3, y: 3 }, alpha: 0.6, color: color });
+          filter = new DropShadowFilter({ offset: { x: range / 3, y: range / 3 }, alpha: 0.6, color: color });
         } else {
-          filter = createFallbackFilter(color, 0.5);
+          filter = createFallbackFilter(color, intensity * 0.5);
         }
         break;
       case 'neon':
         if (GlowFilter) {
-          filter = new GlowFilter({ distance: 8, outerStrength: 2.5, innerStrength: 0.3, color: color });
+          filter = new GlowFilter({ 
+            distance: range, 
+            outerStrength: intensity * 2.5, 
+            innerStrength: intensity * 0.3, 
+            color: color 
+          });
         } else {
-          filter = createFallbackFilter(color, 2);
+          filter = createFallbackFilter(color, intensity * 2);
         }
         break;
       default:
         if (GlowFilter) {
-          filter = new GlowFilter({ distance: 10, outerStrength: 1.5, color: color });
+          filter = new GlowFilter({ distance: range, outerStrength: intensity * 1.5, color: color });
         } else {
-          filter = createFallbackFilter(color, 1);
+          filter = createFallbackFilter(color, intensity);
         }
     }
 

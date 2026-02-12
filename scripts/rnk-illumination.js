@@ -22,7 +22,9 @@ function getUserSettings(userId) {
   return {
     color: sanitizeColor(raw.color || DEFAULT_SETTINGS.color),
     effect: raw.effect || DEFAULT_SETTINGS.effect,
-    symbol: raw.symbol || DEFAULT_SETTINGS.symbol
+    symbol: raw.symbol || DEFAULT_SETTINGS.symbol,
+    intensity: raw.intensity || DEFAULT_SETTINGS.intensity,
+    range: raw.range || DEFAULT_SETTINGS.range
   };
 }
 
@@ -137,7 +139,7 @@ Hooks.on('ready', () => {
 });
 
 Hooks.on('canvasReady', () => {
-  initTargetingLines();
+  clearTargetingIndicators();
   refreshAllTokenIllumination();
 });
 

@@ -25,6 +25,12 @@
         <input type="text" name="gmCustomSymbol" value="{{gmSettings.customSymbol}}" placeholder="Image URL or path">
         <button type="button" class="rnk-upload-btn" data-target="gmCustomSymbol">Upload</button>
       </div>
+      <input type="number" name="gmIntensity" value="{{gmSettings.intensity}}" min="0.1" max="3.0" step="0.1" title="Effect Intensity">
+      <select name="gmRange" title="Effect Range">
+        {{#each ranges}}
+        <option value="{{this}}" {{#if (eq this ../gmSettings.range)}}selected{{/if}}>Range: {{this}}px</option>
+        {{/each}}
+      </select>
     </div>
   </div>
 
@@ -55,6 +61,12 @@
         <input type="text" name="{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="Image URL or path">
         <button type="button" class="rnk-upload-btn" data-target="{{this.id}}_customSymbol">Upload</button>
       </div>
+      <input type="number" name="{{this.id}}_intensity" value="{{this.settings.intensity}}" min="0.1" max="3.0" step="0.1" title="Effect Intensity">
+      <select name="{{this.id}}_range" title="Effect Range">
+        {{#each ../ranges}}
+        <option value="{{this}}" {{#if (eq this ../this.settings.range)}}selected{{/if}}>Range: {{this}}px</option>
+        {{/each}}
+      </select>
     </div>
     {{/each}}
   </div>
