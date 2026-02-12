@@ -1,5 +1,5 @@
 {
-  "title": "RNK™ Illumination",
+  "title": "RNKâ„¢ Illumination",
   "id": "rnk-illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
   "version": "2.4.4",
@@ -11,23 +11,16 @@
   ],
   "authors": [
     {
-      "name": "RNK™ Enterprise",
+      "name": "RNKâ„¢ Enterprise",
       "email": "asgardinnovations@protonmail.com"
     }
   ],
   "compatibility": {
-    "minimum": "11",
-    "verified": "13"
+    "minimum": 11,
+    "verified": 13
   },
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    }
-  ],
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
-  "manifest": "https://r2.foundryvtt.com/packages-public/rnk-illumination/module.json",
+  "manifest": "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/maimination/main/module.json",
   "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/2.4.4/rnk-illumination.zip",
   "bugs": "https://github.com/RNK-Enterprise/rnk-illumination/issues",
   "readme": "https://github.com/RNK-Enterprise/rnk-illumination/blob/main/README.md",
