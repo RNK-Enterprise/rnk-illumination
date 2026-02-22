@@ -48,7 +48,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.warn('Only the GM can open the Illumination Hub.');
       return;
     }
-    this.render(true);
+    this.render({ force: true });
   }
 
   async _prepareContext(_options) {
@@ -104,34 +104,36 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  activateListeners(html) {
-    super.activateListeners?.(html);
+  _onRender(context, options) {
+    super._onRender?.(context, options);
     
-    const $btns = html.find('.rnk-upload-btn');
-    $btns.on('click', async (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const btn = ev.currentTarget;
-      const target = btn.dataset.target;
+    const btns = this.element.querySelectorAll('.rnk-upload-btn');
+    btns.forEach(btn => {
+      btn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const target = btn.dataset.target;
 
-      if (typeof FilePicker !== 'function') {
-        ui.notifications.error('FilePicker is not available in this environment.');
-        html.find(`[name="${target}"]`).focus();
-        return;
-      }
-
-      try {
-        const value = await new Promise(resolve => {
-          const fp = new FilePicker({ type: "image", callback: (path) => resolve(path) });
-          fp.browse();
-        });
-        if (value) {
-          const $input = html.find(`[name="${target}"]`);
-          $input.val(value).trigger('change');
+        if (typeof FilePicker !== 'function') {
+          ui.notifications.error('FilePicker is not available in this environment.');
+          this.element.querySelector(`[name="${target}"]`).focus();
+          return;
         }
-      } catch (err) {
-        console.error('RNK™ Illumination | Upload handler error', err);
-      }
+
+        try {
+          const value = await new Promise(resolve => {
+            const fp = new FilePicker({ type: "image", callback: (path) => resolve(path) });
+            fp.browse();
+          });
+          if (value) {
+            const input = this.element.querySelector(`[name="${target}"]`);
+            input.value = value;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        } catch (err) {
+          console.error('RNK™ Illumination | Upload handler error', err);
+        }
+      });
     });
   }
 
@@ -251,5 +253,5 @@ export function openIlluminationHub() {
     ui.notifications.error("Only Game Masters can access the Illumination Hub");
     return;
   }
-  new RNKGMHub().render(true);
+  new RNKGMHub().render({ force: true });
 }

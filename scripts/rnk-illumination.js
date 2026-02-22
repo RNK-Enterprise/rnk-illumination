@@ -28,12 +28,62 @@ function getUserSettings(userId) {
   };
 }
 
+// -----------------------------------------------------------------------------
+// GM Origin Token Helpers
+// -----------------------------------------------------------------------------
+
+/**
+ * Return the token ID currently marked as the GM's origin for targeting.
+ * @returns {string|null}
+ */
+function getGMOriginTokenId() {
+  return game.settings.get(MODULE_ID, 'gmOriginTokenId');
+}
+
+/**
+ * Set a specific token as the GM's origin for targeting. Passing null clears it.
+ * @param {string|null} tokenId
+ */
+function setGMOriginTokenId(tokenId) {
+  return game.settings.set(MODULE_ID, 'gmOriginTokenId', tokenId);
+}
+
+/**
+ * Clear the GM origin token selection.
+ */
+function clearGMOriginToken() {
+  return setGMOriginTokenId(null);
+}
+
+/**
+ * Convenience accessor which returns the actual Token object (if present).
+ * Will fall back to normal ownership lookup if no origin token is defined.
+ * @param {User} user
+ * @returns {Token|null}
+ */
+function getGMOriginToken(user) {
+  if (!user || !user.isGM) return null;
+  const id = getGMOriginTokenId();
+  if (id && canvas?.tokens?.get(id)) return canvas.tokens.get(id);
+  return null;
+}
+
+
 /**
  * Get the token that belongs to a specific user
  */
 function getUserToken(user) {
   if (!user || !canvas?.tokens?.placeables) return null;
-  
+
+  // When the GM has explicitly chosen an origin token, always return it
+  if (user.isGM) {
+    const originId = game.settings.get(MODULE_ID, 'gmOriginTokenId');
+    if (originId) {
+      const originToken = canvas.tokens.get(originId);
+      if (originToken) return originToken;
+    }
+  }
+
   // Find the token owned by this user (NOT the controlled token)
   // We need the user's own token, not the one they're controlling
   return canvas.tokens.placeables.find(token => {
@@ -125,6 +175,16 @@ Hooks.on('init', () => {
 });
 
 Hooks.on('ready', () => {
+  // register the hidden setting that tracks which token the GM has chosen as
+  // the active origin for targeting lines.
+  game.settings.register(MODULE_ID, 'gmOriginTokenId', {
+    name: 'GM Target Origin Token ID',
+    scope: 'world',
+    config: false,
+    default: null,
+    type: String
+  });
+
   if (game.user?.isGM) {
     game.settings.registerMenu(MODULE_ID, 'gmHub', {
       name: 'RNK Illumination Hub',
@@ -156,7 +216,7 @@ Hooks.on('targetToken', (user, token, isTargeted) => {
         
         const settings = getUserSettings(user.id);
         if (isTargeted) {
-          drawTargetingLine(user, token, settings.color, settings.symbol);
+          drawTargetingLine(user, token, settings.color);
         } else {
           removeTargetingLine(user, token);
         }
@@ -182,11 +242,79 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
   }
 });
 
+Hooks.on('refreshToken', (token) => {
+  refreshTokenIllumination(token);
+});
+
 Hooks.on('deleteToken', (tokenDoc) => {
   if (tokenDoc.object) {
     removeEffect(tokenDoc.object);
     hideTargetingIndicator(tokenDoc.object);
     clearTargetingLinesForToken(tokenDoc.object);
+  }
+  // If the token being removed was remembered as the GM origin, clear the
+  // setting so we don't point at a non-existent token later.
+  const originId = getGMOriginTokenId();
+  if (originId && tokenDoc.id === originId) {
+    clearGMOriginToken();
+  }
+});
+
+// Add a little toggle button to the token HUD for GMs to mark the origin
+// token used when drawing targeting lines.  The button appears on tokens
+// that have no player owners (NPCs).
+Hooks.on('renderTokenHUD', (app, html, data) => {
+  if (!game.user?.isGM) return;
+
+  // V13 uses app.object, older versions use app.token
+  const token = app.object ?? app.token;
+  if (!token || !token.actor) return;
+  if (token.actor.hasPlayerOwner) return;
+
+  const originId = getGMOriginTokenId();
+  const isActive = originId === token.id;
+  const titleKey = isActive ? "rnk-illumination.ui.token.originButtonActive" : "rnk-illumination.ui.token.originButton";
+
+  // Create button as a native DOM element (works in both V12 jQuery and V13 native)
+  const btn = document.createElement('a');
+  btn.classList.add('control-icon', 'rnk-origin-btn');
+  if (isActive) btn.classList.add('active');
+  btn.title = game.i18n.localize(titleKey);
+  btn.innerHTML = '<i class="fas fa-crosshairs"></i>';
+
+  btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (isActive) {
+      clearGMOriginToken();
+    } else {
+      setGMOriginTokenId(token.id);
+    }
+    canvas.tokens.placeables.forEach(t => t.hud?.render());
+    refreshAllTokenIllumination();
+    clearTargetingLines();
+    game.users.forEach(u => {
+      u.targets.forEach(t => {
+        const settings = getUserSettings(u.id);
+        drawTargetingLine(u, t, settings.color);
+      });
+    });
+  });
+
+  // Resolve the root element whether html is jQuery or a native element
+  const root = html instanceof HTMLElement ? html : (html[0] ?? html);
+  const selectors = ['.col.right', '.col.left', '.col', '.controls'];
+  let inserted = false;
+  for (const sel of selectors) {
+    const container = root.querySelector(sel);
+    if (container) {
+      container.appendChild(btn);
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted) {
+    root.appendChild(btn);
   }
 });
 
@@ -217,7 +345,10 @@ Hooks.on('getSceneControlButtons', (controls) => {
         name: 'illumination-hub',
         title: 'Open Hub',
         icon: 'fa-solid fa-palette',
-        onClick: () => openIlluminationHub(),
+        onChange: (active) => {
+          if (!active) return;
+          openIlluminationHub();
+        },
         button: true,
         toggle: false,
         active: false,
@@ -235,8 +366,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
 
 Hooks.on('renderSceneControls', (app, html, data) => {
   if (!game.user?.isGM) return;
-  const root = (html instanceof HTMLElement) ? html : (html?.[0] || document);
-  const button = root.querySelector(`[data-control="${MODULE_ID}"]`) ||
+  const button = html.querySelector(`[data-control="${MODULE_ID}"]`) ||
                  document.querySelector(`[data-control="${MODULE_ID}"]`);
   if (!button) return;
   button.classList.add('module-control-btn');
@@ -279,7 +409,7 @@ function getTargetingLineGraphics(userId, targetId) {
  * @param {string} color - The color for the line
  * @param {string} symbol - The symbol/icon for markers
  */
-function drawTargetingLine(user, targetToken, color, symbol) {
+function drawTargetingLine(user, targetToken, color) {
   if (!user || !targetToken || !canvas?.ready) return;
   
   const userToken = getUserToken(user);
@@ -332,26 +462,25 @@ function drawTargetingLine(user, targetToken, color, symbol) {
       const markerX = startX + unitVectorX * pixelDist;
       const markerY = startY + unitVectorY * pixelDist;
 
-      // Draw icon symbol if provided
-      if (symbol) {
-        const iconText = new PIXI.Text(symbol, {
-          fontFamily: 'Arial',
-          fontSize: 20,
-          fill: colorValue,
-          align: 'center',
-          stroke: 0x000000,
-          strokeThickness: 2
-        });
-        iconText.anchor.set(0.5, 0.5);
-        iconText.position.set(markerX, markerY);
-        graphics.addChild(iconText);
-      } else {
-        // Fallback to dot if no symbol
-        graphics.lineStyle(0);
-        graphics.beginFill(colorValue, 0.8);
-        graphics.drawCircle(markerX, markerY, 5);
-        graphics.endFill();
-      }
+      // Draw directional arrow at each marker pointing toward target
+      const arrowSize = 8;
+      const lineAngle = Math.atan2(dy, dx);
+      const aSpread = Math.PI / 6;
+      graphics.lineStyle(0);
+      graphics.beginFill(colorValue, 0.9);
+      graphics.moveTo(
+        markerX + Math.cos(lineAngle) * arrowSize,
+        markerY + Math.sin(lineAngle) * arrowSize
+      );
+      graphics.lineTo(
+        markerX - Math.cos(lineAngle - aSpread) * arrowSize,
+        markerY - Math.sin(lineAngle - aSpread) * arrowSize
+      );
+      graphics.lineTo(
+        markerX - Math.cos(lineAngle + aSpread) * arrowSize,
+        markerY - Math.sin(lineAngle + aSpread) * arrowSize
+      );
+      graphics.endFill();
 
       // Draw distance label
       const text = new PIXI.Text(`${distance}${units}`, {
@@ -424,7 +553,7 @@ function updateTokenTargetingLines(token) {
     if (userToken === token) {
       user.targets.forEach(target => {
         const settings = getUserSettings(user.id);
-        drawTargetingLine(user, target, settings.color, settings.symbol);
+        drawTargetingLine(user, target, settings.color);
       });
     }
   });
@@ -433,7 +562,7 @@ function updateTokenTargetingLines(token) {
   game.users.forEach(user => {
     if (user.targets.has(token)) {
       const settings = getUserSettings(user.id);
-      drawTargetingLine(user, token, settings.color, settings.symbol);
+      drawTargetingLine(user, token, settings.color);
     }
   });
 }

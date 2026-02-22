@@ -101,6 +101,7 @@ As always, love and respect from the RNK Enterprise, Odinn
 ## Release Notes v2.2.0
 
 - **Targeting Lines**: Visual measurement lines between user tokens and targets
+- **Selectable Origin for GMs**: A crosshair button appears on NPC tokens for GMs; click to mark a token as the source of targeting lines, and click again to clear it.
 - **Distance Markers**: Automatic distance markers every 5 feet along targeting lines
 - **Arrow Indicators**: Directional arrows showing targeting direction
 - **Canvas Integration**: Lines render on canvas controls layer for proper visibility

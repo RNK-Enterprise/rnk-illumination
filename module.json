@@ -2,13 +2,19 @@
   "title": "RNK™ Illumination",
   "id": "rnk-illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "esmodules": [
     "scripts/rnk-illumination.js"
   ],
   "styles": [
     "styles/rnk-illumination.css"
   ],
+  "languages": {
+    "en": {
+      "name": "English",
+      "path": "languages/en.json"
+    }
+  },
   "authors": [
     {
       "name": "RNK™ Enterprise",
@@ -21,7 +27,7 @@
   },
   "url": "https://github.com/RNK-Enterprise/rnk-illumination",
   "manifest": "https://raw.githubusercontent.com/RNK-Enterprise/rnk-illumination/main/module.json",
-  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/2.5.2/rnk-illumination-2.5.2.zip",
+  "download": "https://github.com/RNK-Enterprise/rnk-illumination/releases/download/2.5.3/rnk-illumination-2.5.3.zip",
   "bugs": "https://github.com/RNK-Enterprise/rnk-illumination/issues",
   "readme": "https://github.com/RNK-Enterprise/rnk-illumination/blob/main/README.md",
   "license": "https://github.com/RNK-Enterprise/rnk-illumination/blob/main/LICENSE",
