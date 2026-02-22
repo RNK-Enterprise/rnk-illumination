@@ -198,6 +198,28 @@
   margin-bottom: 0.75rem;
 }
 
+/* --------------------------------------------
+   Token HUD origin selector button
+   -------------------------------------------- */
+.control-icon.rnk-origin-btn {
+  position: relative;
+  color: #ff6400;
+}
+.control-icon.rnk-origin-btn.active {
+  color: #4a90d9;
+  text-shadow: 0 0 5px rgba(74,144,217,0.6);
+}
+.control-icon.rnk-origin-btn i {
+  pointer-events: none;
+}
+.control-icon.rnk-origin-btn:hover {
+  background: rgba(255,100,0,0.15);
+}
+.control-icon.rnk-origin-btn.active:hover {
+  background: rgba(74,144,217,0.15);
+}
+
+
 #rnk-illumination-hub .rnk-illumination-form-group label {
   font-weight: bold;
   font-size: 0.875rem;

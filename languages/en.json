@@ -10,6 +10,10 @@
       "hub": {
         "title": "Illumination Hub",
         "open": "Open Illumination Hub"
+      },
+      "token": {
+        "originButton": "Use this token as targeting origin",
+        "originButtonActive": "Currently selected as targeting origin"
       }
     }
   }
