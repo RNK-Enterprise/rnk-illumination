@@ -9,12 +9,13 @@
   "styles": [
     "styles/rnk-illumination.css"
   ],
-  "languages": {
-    "en": {
+  "languages": [
+    {
+      "lang": "en",
       "name": "English",
       "path": "languages/en.json"
     }
-  },
+  ],
   "authors": [
     {
       "name": "RNK™ Enterprise",

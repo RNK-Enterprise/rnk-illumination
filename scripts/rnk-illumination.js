@@ -210,12 +210,14 @@ Hooks.on('targetToken', (user, token, isTargeted) => {
       const userToken = getUserToken(user);
       if (userToken) {
         refreshTokenIllumination(userToken);
-        
+
         // Don't draw line to self
         if (userToken.id === token.id) return;
-        
+
         const settings = getUserSettings(user.id);
         if (isTargeted) {
+          // Clear any old lines before drawing new one
+          removeTargetingLine(user, token);
           drawTargetingLine(user, token, settings.color);
         } else {
           removeTargetingLine(user, token);
@@ -233,10 +235,11 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
   if (changes.actorLink || changes.actorId || changes.disposition) {
     if (tokenDoc.object) refreshTokenIllumination(tokenDoc.object);
   }
-  
-  // Update targeting lines when tokens move
+
+  // Update targeting lines when tokens move - with debounce
   if ("x" in changes || "y" in changes || "elevation" in changes) {
     if (tokenDoc.object) {
+      // Execute immediately to ensure line moves smoothly with token
       updateTokenTargetingLines(tokenDoc.object);
     }
   }
@@ -411,20 +414,25 @@ function getTargetingLineGraphics(userId, targetId) {
  */
 function drawTargetingLine(user, targetToken, color) {
   if (!user || !targetToken || !canvas?.ready) return;
-  
+
   const userToken = getUserToken(user);
   if (!userToken) return;
-  
+
   const userId = user.id;
   const targetId = targetToken.id;
   const graphics = getTargetingLineGraphics(userId, targetId);
-  
+
   // Clear previous drawings and remove all children (text/icons)
-  graphics.clear();
-  if (graphics.children.length > 0) {
-    for (let i = graphics.children.length - 1; i >= 0; i--) {
-      graphics.children[i].destroy();
+  try {
+    // Destroy all child objects first
+    while (graphics.children.length > 0) {
+      graphics.children[0]?.destroy({ children: true });
     }
+    graphics.clear();
+    // Mark geometry as dirty to force PIXI to update
+    if (graphics.geometry) graphics.geometry.invalidate();
+  } catch (err) {
+    console.error('RNK™ Illumination | Error clearing graphics:', err);
   }
 
   const startX = userToken.center.x;
@@ -515,6 +523,9 @@ function drawTargetingLine(user, targetToken, color) {
   );
   graphics.lineTo(endX, endY);
   graphics.endFill();
+
+  // Mark as needing update for PIXI rendering
+  if (graphics.geometry) graphics.geometry.invalidate();
 }
 
 /**
@@ -526,14 +537,26 @@ function removeTargetingLine(user, targetToken) {
   if (!user || !targetToken) return;
   const userId = user.id;
   const targetId = targetToken.id;
-  
+
   if (_targetingLines.has(userId)) {
     const userLines = _targetingLines.get(userId);
     if (userLines.has(targetId)) {
       const graphics = userLines.get(targetId);
-      if (!graphics.destroyed) graphics.destroy({ children: true });
+      try {
+        // Destroy all children first
+        while (graphics.children.length > 0) {
+          graphics.children[0]?.destroy({ children: true });
+        }
+        if (!graphics.destroyed) {
+          graphics.clear();
+          if (graphics.geometry) graphics.geometry.invalidate();
+          graphics.destroy({ children: true });
+        }
+      } catch (err) {
+        console.error('RNK™ Illumination | Error removing targeting line:', err);
+      }
       userLines.delete(targetId);
-      
+
       if (userLines.size === 0) {
         _targetingLines.delete(userId);
       }
@@ -573,23 +596,43 @@ function updateTokenTargetingLines(token) {
 function clearTargetingLinesForToken(token) {
   if (!token) return;
   const tokenId = token.id;
-  
+
   // Remove lines where this token was the target
   _targetingLines.forEach((userLines, userId) => {
     if (userLines.has(tokenId)) {
       const graphics = userLines.get(tokenId);
-      if (!graphics.destroyed) graphics.destroy({ children: true });
+      try {
+        while (graphics.children.length > 0) {
+          graphics.children[0]?.destroy({ children: true });
+        }
+        if (!graphics.destroyed) {
+          graphics.clear();
+          if (graphics.geometry) graphics.geometry.invalidate();
+          graphics.destroy({ children: true });
+        }
+      } catch (err) { /* ignore */ }
       userLines.delete(tokenId);
     }
     if (userLines.size === 0) _targetingLines.delete(userId);
   });
-  
+
   // Remove lines where this token was the source (user's character token)
   game.users.forEach(user => {
     const userToken = getUserToken(user);
     if (userToken === token && _targetingLines.has(user.id)) {
       const userLines = _targetingLines.get(user.id);
-      userLines.forEach(g => { if (!g.destroyed) g.destroy({ children: true }); });
+      userLines.forEach(g => {
+        try {
+          while (g.children.length > 0) {
+            g.children[0]?.destroy({ children: true });
+          }
+          if (!g.destroyed) {
+            g.clear();
+            if (g.geometry) g.geometry.invalidate();
+            g.destroy({ children: true });
+          }
+        } catch (err) { /* ignore */ }
+      });
       _targetingLines.delete(user.id);
     }
   });
@@ -601,7 +644,16 @@ function clearTargetingLinesForToken(token) {
 function clearTargetingLines() {
   _targetingLines.forEach((userLines) => {
     userLines.forEach((graphics) => {
-      graphics.destroy();
+      try {
+        while (graphics.children.length > 0) {
+          graphics.children[0]?.destroy({ children: true });
+        }
+        if (!graphics.destroyed) {
+          graphics.clear();
+          if (graphics.geometry) graphics.geometry.invalidate();
+          graphics.destroy({ children: true });
+        }
+      } catch (err) { /* ignore */ }
     });
   });
   _targetingLines.clear();
