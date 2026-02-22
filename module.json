@@ -2,7 +2,7 @@
   "title": "RNK™ Illumination",
   "id": "rnk-illumination",
   "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "esmodules": [
     "scripts/rnk-illumination.js"
   ],
