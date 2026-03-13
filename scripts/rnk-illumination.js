@@ -85,7 +85,7 @@ function getUserToken(user) {
   }
 
   // If the user has been assigned a specific token in the Hub, use it.
-  const assignedId = user.getFlag(MODULE_ID, 'assignedTokenId');
+  const assignedId = user.getFlag?.(MODULE_ID, 'assignedTokenId');
   if (assignedId) {
     const assignedToken = canvas.tokens.get(assignedId);
     if (assignedToken) return assignedToken;
@@ -111,7 +111,7 @@ function getTokenOwner(token) {
   if (!token) return null;
 
   // If the token has an assigned user, prefer that over ownership-derived user.
-  const assignedId = token.getFlag(MODULE_ID, 'assignedUserId');
+  const assignedId = token.getFlag ? token.getFlag(MODULE_ID, 'assignedUserId') : token.document?.getFlag?.(MODULE_ID, 'assignedUserId');
   if (assignedId) {
     const assignedUser = game.users.get(assignedId);
     if (assignedUser) return assignedUser;
@@ -119,6 +119,7 @@ function getTokenOwner(token) {
 
   const actor = token.actor;
   if (!actor) return null;
+
   const owners = game.users.filter(u => actor.testUserPermission(u, 'OWNER'));
   const playerOwner = owners.find(u => !u.isGM);
   return playerOwner || owners[0] || null;
