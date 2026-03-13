@@ -232,16 +232,33 @@ Hooks.on('createToken', (tokenDoc) => {
 });
 
 Hooks.on('updateToken', (tokenDoc, changes) => {
+  // Prefer the canvas token (up-to-date position) over the document's .object
+  const token = canvas?.tokens?.get(tokenDoc.id) || tokenDoc.object;
+
   if (changes.actorLink || changes.actorId || changes.disposition) {
-    if (tokenDoc.object) refreshTokenIllumination(tokenDoc.object);
+    if (token) refreshTokenIllumination(token);
   }
 
-  // Update targeting lines when tokens move - with debounce
+  // Update targeting lines when tokens move
   if ("x" in changes || "y" in changes || "elevation" in changes) {
-    if (tokenDoc.object) {
+    if (token) {
       // Execute immediately to ensure line moves smoothly with token
-      updateTokenTargetingLines(tokenDoc.object);
+      updateTokenTargetingLines(token);
     }
+  }
+});
+
+// Clear targeting lines while a token is being dragged/moved, then restore them
+// once movement finishes. This prevents lines from “sticking” in place while the
+// token is being repositioned.
+Hooks.on('controlToken', (token, controlled) => {
+  if (!token) return;
+  if (controlled) {
+    // Token is now being moved; remove any lines attached to it.
+    clearTargetingLinesForToken(token);
+  } else {
+    // Movement ended; redraw lines based on new position.
+    updateTokenTargetingLines(token);
   }
 });
 
