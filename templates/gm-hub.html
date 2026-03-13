@@ -1,4 +1,25 @@
 <div class="rnk-illumination-content">
+  <!-- GM/Co-GM Cards -->
+  <div class="rnk-illumination-gm-section">
+    <div class="rnk-illumination-gm-header">
+      <div class="rnk-illumination-title">Illumination Administrators</div>
+      <div class="rnk-illumination-subtitle">GM + Co-GM users can configure the module for everyone.</div>
+    </div>
+    <div class="rnk-illumination-gm-grid">
+      {{#each gmUsers}}
+      <div class="rnk-illumination-gm-card">
+        <div class="rnk-illumination-avatar-container">
+          <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{../gmSettings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
+        </div>
+        <div class="rnk-illumination-gm-info">
+          <span class="rnk-illumination-name">{{this.name}}</span>
+          <span class="rnk-illumination-role">{{#if this.isGM}}Game Master{{else}}Co-GM{{/if}}</span>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
   <!-- GM Card -->
   <div class="rnk-illumination-gm-section">
     <div class="rnk-illumination-gm-card">
@@ -8,7 +29,7 @@
       </div>
       <div class="rnk-illumination-gm-info">
         <span class="rnk-illumination-name">{{gm.name}}</span>
-        <span class="rnk-illumination-role">Game Master</span>
+        <span class="rnk-illumination-role">{{#if gm.isGM}}Game Master{{else}}Co-GM{{/if}}</span>
       </div>
       <input type="color" name="gmColor" value="{{gmSettings.color}}" title="Illumination Color">
       <select name="gmEffect" title="Effect Style">
@@ -46,6 +67,11 @@
         <button type="button" class="rnk-avatar-upload-btn" data-user="{{this.id}}" title="Upload Avatar">📷</button>
       </div>
       <span class="rnk-illumination-name">{{this.name}}</span>
+      <span class="rnk-illumination-role">{{#if this.isGM}}GM{{else}}{{#if this.isCoGM}}Co-GM{{else}}Player{{/if}}{{/if}}</span>
+      <label class="rnk-illumination-cogm">
+        <input type="checkbox" name="coGM_{{this.id}}" value="1" {{#if this.isCoGM}}checked{{/if}} {{#unless ../isCurrentUserGM}}disabled{{/unless}}>
+        Co-GM
+      </label>
       <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
       <select name="{{this.id}}_effect" title="Effect Style">
         {{#each ../effects}}

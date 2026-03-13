@@ -43,9 +43,13 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
   /**
    * Open the hub application
    */
+  _isCoGM(user) {
+    return user?.isGM || (user?.getFlag && user.getFlag(MODULE_ID, 'coGM'));
+  }
+
   open() {
-    if (!game.user.isGM) {
-      ui.notifications.warn('Only the GM can open the Illumination Hub.');
+    if (!this._isCoGM(game.user)) {
+      ui.notifications.warn('Only the GM or a designated Co-GM can open the Illumination Hub.');
       return;
     }
     this.render({ force: true });
@@ -54,6 +58,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext(_options) {
     if (!game.user) {
       return {
+        gmUsers: [],
         users: [],
         gmSettings: { ...DEFAULT_SETTINGS },
         effects: AVAILABLE_EFFECTS,
@@ -62,24 +67,40 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     }
 
-    const users = game.users.filter(u => u.id !== game.user.id).map(user => {
-      const settings = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
-      return {
+    const gmUsers = game.users
+      .filter(u => this._isCoGM(u))
+      .map(user => ({
         id: user.id,
         name: user.name,
         avatar: user.avatar,
         color: sanitizeColor(user.color),
         isGM: user.isGM,
-        settings: {
-          color: sanitizeColor(settings.color),
-          effect: settings.effect || DEFAULT_SETTINGS.effect,
-          symbol: sanitizeSymbol(settings.symbol),
-          intensity: settings.intensity || DEFAULT_SETTINGS.intensity,
-          range: settings.range || DEFAULT_SETTINGS.range,
-          customSymbol: settings.customSymbol || ''
-        }
-      };
-    });
+        isCoGM: !user.isGM && this._isCoGM(user)
+      }));
+
+    const isCurrentUserGM = game.user.isGM;
+    const users = game.users
+      .filter(u => u.id !== game.user.id)
+      .map(user => {
+        const settings = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+        return {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          color: sanitizeColor(user.color),
+          isGM: user.isGM,
+          isCoGM: !user.isGM && this._isCoGM(user),
+          settings: {
+            color: sanitizeColor(settings.color),
+            effect: settings.effect || DEFAULT_SETTINGS.effect,
+            symbol: sanitizeSymbol(settings.symbol),
+            intensity: settings.intensity || DEFAULT_SETTINGS.intensity,
+            range: settings.range || DEFAULT_SETTINGS.range,
+            customSymbol: settings.customSymbol || ''
+          }
+        };
+      });
+
     const gmUser = game.user;
     const gmSettings = gmUser.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
     return {
@@ -87,9 +108,13 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         id: gmUser.id,
         name: gmUser.name,
         avatar: gmUser.avatar,
-        color: sanitizeColor(gmUser.color)
+        color: sanitizeColor(gmUser.color),
+        isGM: gmUser.isGM,
+        isCoGM: !gmUser.isGM && this._isCoGM(gmUser)
       },
+      gmUsers: gmUsers,
       users: users,
+      isCurrentUserGM: isCurrentUserGM,
       gmSettings: {
         color: sanitizeColor(gmSettings.color),
         effect: gmSettings.effect || DEFAULT_SETTINGS.effect,
@@ -185,6 +210,9 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       };
       await game.user.setFlag(MODULE_ID, 'settings', gmSettings);
 
+      // Only the actual GM can promote/demote Co-GMs.
+      const currentUserIsGM = game.user?.isGM;
+
       for (const user of game.users.filter(u => u.id !== game.user.id)) {
         const color = data[`${user.id}_color`];
         const effect = data[`${user.id}_effect`];
@@ -192,7 +220,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         const range = parseInt(data[`${user.id}_range`]) || DEFAULT_SETTINGS.range;
         const customSymbol = (data[`${user.id}_customSymbol`] || '').trim();
         const symbol = customSymbol || data[`${user.id}_symbol`];
-        
+        const coGM = currentUserIsGM ? Boolean(data[`coGM_${user.id}`]) : (user.getFlag(MODULE_ID, 'coGM') || false);
+
         if (!/^#[0-9A-F]{6}$/i.test(color)) {
           throw new Error(`Invalid color format for user ${user.name}`);
         }
@@ -217,8 +246,11 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           range: range,
           customSymbol: customSymbol || ''
         };
+
         await user.setFlag(MODULE_ID, 'settings', settings);
+        await user.setFlag(MODULE_ID, 'coGM', coGM);
       }
+
       ui.notifications.info("GM and player settings updated");
       console.log('RNK™ Illumination | Settings saved successfully');
       setTimeout(() => {
