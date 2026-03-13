@@ -102,7 +102,21 @@ function getUserToken(user) {
 /**
  * Get the owner of a token
  */
+function isCoGM(user) {
+  if (!user) return false;
+  return user.isGM || Boolean(user.getFlag && user.getFlag(MODULE_ID, 'coGM'));
+}
+
 function getTokenOwner(token) {
+  if (!token) return null;
+
+  // If the token has an assigned user, prefer that over ownership-derived user.
+  const assignedId = token.getFlag(MODULE_ID, 'assignedUserId');
+  if (assignedId) {
+    const assignedUser = game.users.get(assignedId);
+    if (assignedUser) return assignedUser;
+  }
+
   const actor = token.actor;
   if (!actor) return null;
   const owners = game.users.filter(u => actor.testUserPermission(u, 'OWNER'));
@@ -291,7 +305,7 @@ Hooks.on('deleteToken', (tokenDoc) => {
 // token used when drawing targeting lines.  The button appears on tokens
 // that have no player owners (NPCs).
 Hooks.on('renderTokenHUD', (app, html, data) => {
-  if (!game.user?.isGM) return;
+  if (!isCoGM(game.user)) return;
 
   // V13 uses app.object, older versions use app.token
   const token = app.object ?? app.token;
@@ -328,6 +342,53 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     });
   });
 
+  // Assign this token to a specific user (GM/Co-GM or player)
+  const assignBtn = document.createElement('a');
+  assignBtn.classList.add('control-icon', 'rnk-assign-btn');
+  assignBtn.title = 'Assign token to user';
+  assignBtn.innerHTML = '<i class="fas fa-user-tag"></i>';
+  assignBtn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const currentAssign = token.getFlag(MODULE_ID, 'assignedUserId') || '';
+    const options = [
+      { value: '', label: 'None (default owner)' }
+    ].concat(
+      game.users.map(u => ({ value: u.id, label: `${u.name}${u.isGM ? ' (GM)' : ''}` }))
+    );
+
+    const content = `
+      <div class="form-group">
+        <label>Select user to assign this token to:</label>
+        <select id="rnk-assign-user" style="width: 100%;">
+          ${options.map(o => `<option value="${o.value}" ${o.value === currentAssign ? 'selected' : ''}>${o.label}</option>`).join('')}
+        </select>
+      </div>
+    `;
+
+    new Dialog({
+      title: 'Assign Token',
+      content,
+      buttons: {
+        confirm: {
+          icon: '<i class="fas fa-check"></i>',
+          label: 'Assign',
+          callback: async (html) => {
+            const selected = html.find('#rnk-assign-user')[0].value;
+            await token.setFlag(MODULE_ID, 'assignedUserId', selected || null);
+            refreshAllTokenIllumination();
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: 'Cancel'
+        }
+      },
+      default: 'confirm'
+    }).render(true);
+  });
+
   // Resolve the root element whether html is jQuery or a native element
   const root = html instanceof HTMLElement ? html : (html[0] ?? html);
   const selectors = ['.col.right', '.col.left', '.col', '.controls'];
@@ -336,12 +397,14 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     const container = root.querySelector(sel);
     if (container) {
       container.appendChild(btn);
+      container.appendChild(assignBtn);
       inserted = true;
       break;
     }
   }
   if (!inserted) {
     root.appendChild(btn);
+    root.appendChild(assignBtn);
   }
 });
 
