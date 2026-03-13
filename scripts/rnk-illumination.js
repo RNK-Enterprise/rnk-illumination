@@ -75,7 +75,7 @@ function getGMOriginToken(user) {
 function getUserToken(user) {
   if (!user || !canvas?.tokens?.placeables) return null;
 
-  // When the GM has explicitly chosen an origin token, always return it
+  // When the GM has explicitly chosen an origin token, always return it.
   if (user.isGM) {
     const originId = game.settings.get(MODULE_ID, 'gmOriginTokenId');
     if (originId) {
@@ -84,8 +84,15 @@ function getUserToken(user) {
     }
   }
 
+  // If the user has been assigned a specific token in the Hub, use it.
+  const assignedId = user.getFlag(MODULE_ID, 'assignedTokenId');
+  if (assignedId) {
+    const assignedToken = canvas.tokens.get(assignedId);
+    if (assignedToken) return assignedToken;
+  }
+
   // Find the token owned by this user (NOT the controlled token)
-  // We need the user's own token, not the one they're controlling
+  // We need the user's own token, not the one they're controlling.
   return canvas.tokens.placeables.find(token => {
     const actor = token.actor;
     return actor?.testUserPermission(user, 'OWNER');

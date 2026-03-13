@@ -78,6 +78,11 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         isCoGM: !user.isGM && this._isCoGM(user)
       }));
 
+    const tokens = canvas?.tokens?.placeables?.map(t => ({
+      id: t.id,
+      name: `${t.name} (${t.actor?.name ?? 'No Actor'})`
+    })) || [];
+
     const isCurrentUserGM = game.user.isGM;
     const users = game.users
       .filter(u => u.id !== game.user.id)
@@ -90,6 +95,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
           color: sanitizeColor(user.color),
           isGM: user.isGM,
           isCoGM: !user.isGM && this._isCoGM(user),
+          assignedToken: user.getFlag(MODULE_ID, 'assignedTokenId') || '',
           settings: {
             color: sanitizeColor(settings.color),
             effect: settings.effect || DEFAULT_SETTINGS.effect,
@@ -103,6 +109,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const gmUser = game.user;
     const gmSettings = gmUser.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+    const gmAssignedToken = gmUser.getFlag(MODULE_ID, 'assignedTokenId') || '';
+
     return {
       gm: {
         id: gmUser.id,
@@ -110,10 +118,12 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         avatar: gmUser.avatar,
         color: sanitizeColor(gmUser.color),
         isGM: gmUser.isGM,
-        isCoGM: !gmUser.isGM && this._isCoGM(gmUser)
+        isCoGM: !gmUser.isGM && this._isCoGM(gmUser),
+        assignedToken: gmAssignedToken
       },
       gmUsers: gmUsers,
       users: users,
+      tokens: tokens,
       isCurrentUserGM: isCurrentUserGM,
       gmSettings: {
         color: sanitizeColor(gmSettings.color),
@@ -210,6 +220,10 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       };
       await game.user.setFlag(MODULE_ID, 'settings', gmSettings);
 
+      // Allow the GM to pin a specific token to themselves for consistent origin.
+      const gmAssignedToken = data.gmToken || null;
+      await game.user.setFlag(MODULE_ID, 'assignedTokenId', gmAssignedToken);
+
       // Only the actual GM can promote/demote Co-GMs.
       const currentUserIsGM = game.user?.isGM;
 
@@ -220,6 +234,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         const range = parseInt(data[`${user.id}_range`]) || DEFAULT_SETTINGS.range;
         const customSymbol = (data[`${user.id}_customSymbol`] || '').trim();
         const symbol = customSymbol || data[`${user.id}_symbol`];
+        const assignedToken = data[`token_${user.id}`] || '';
         const coGM = currentUserIsGM ? Boolean(data[`coGM_${user.id}`]) : (user.getFlag(MODULE_ID, 'coGM') || false);
 
         if (!/^#[0-9A-F]{6}$/i.test(color)) {
@@ -249,6 +264,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
         await user.setFlag(MODULE_ID, 'settings', settings);
         await user.setFlag(MODULE_ID, 'coGM', coGM);
+        await user.setFlag(MODULE_ID, 'assignedTokenId', assignedToken || null);
       }
 
       ui.notifications.info("GM and player settings updated");

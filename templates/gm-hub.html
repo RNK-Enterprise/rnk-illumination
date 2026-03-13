@@ -52,6 +52,12 @@
         <option value="{{this}}" {{#if (eq this ../gmSettings.range)}}selected{{/if}}>Range: {{this}}px</option>
         {{/each}}
       </select>
+      <select name="gmToken" title="Assigned Token">
+        <option value="" {{#unless gm.assignedToken}}selected{{/unless}}>Auto (Owned Token)</option>
+        {{#each ../tokens}}
+        <option value="{{this.id}}" {{#if (eq this.id ../gm.assignedToken)}}selected{{/if}}>{{this.name}}</option>
+        {{/each}}
+      </select>
     </div>
   </div>
 
@@ -72,6 +78,12 @@
         <input type="checkbox" name="coGM_{{this.id}}" value="1" {{#if this.isCoGM}}checked{{/if}} {{#unless ../isCurrentUserGM}}disabled{{/unless}}>
         Co-GM
       </label>
+      <select name="token_{{this.id}}" title="Assigned Token">
+        <option value="" {{#unless this.assignedToken}}selected{{/unless}}>Auto (Owned Token)</option>
+        {{#each ../tokens}}
+        <option value="{{this.id}}" {{#if (eq this.id ../this.assignedToken)}}selected{{/if}}>{{this.name}}</option>
+        {{/each}}
+      </select>
       <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
       <select name="{{this.id}}_effect" title="Effect Style">
         {{#each ../effects}}
