@@ -123,6 +123,12 @@ function getTokenOwner(token) {
   if (!actor) return null;
 
   const owners = game.users.filter(u => actor.testUserPermission(u, 'OWNER'));
+
+  // In multi-GM setups, check if any user has this actor set as their character.
+  // This ensures each GM's token uses their own settings, not whoever comes first.
+  const charOwner = owners.find(u => u.character && actor.id === u.character.id);
+  if (charOwner) return charOwner;
+
   const playerOwner = owners.find(u => !u.isGM);
   return playerOwner || owners[0] || null;
 }
@@ -263,26 +269,29 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
     if (token) refreshTokenIllumination(token);
   }
 
-  // Update targeting lines when tokens move
+  // Update targeting lines when tokens move: clear immediately, redraw after
+  // animation completes so lines appear at the final resting position.
   if ("x" in changes || "y" in changes || "elevation" in changes) {
     if (token) {
-      // Execute immediately to ensure line moves smoothly with token
-      updateTokenTargetingLines(token);
+      clearTargetingLinesForToken(token);
+      // Foundry's default token animation is ~300ms; wait for it to finish
+      // before redrawing lines at the new position.
+      const animDuration = (canvas.scene?.getFlag('core', 'animationSpeed') ?? 5) * 100;
+      setTimeout(() => {
+        // Re-fetch the token to get the updated visual position
+        const t = canvas?.tokens?.get(tokenDoc.id);
+        if (t) updateTokenTargetingLines(t);
+      }, animDuration + 50);
     }
   }
 });
 
-// Clear targeting lines while a token is being dragged/moved, then restore them
-// once movement finishes. This prevents lines from “sticking” in place while the
-// token is being repositioned.
-Hooks.on('controlToken', (token, controlled) => {
-  if (!token) return;
-  if (controlled) {
-    // Token is now being moved; remove any lines attached to it.
-    clearTargetingLinesForToken(token);
-  } else {
-    // Movement ended; redraw lines based on new position.
-    updateTokenTargetingLines(token);
+// When a token drag starts, clear its lines so they don't stick at old positions.
+// Lines are redrawn in the updateToken hook after animation completes.
+Hooks.on('preUpdateToken', (tokenDoc, changes) => {
+  if ("x" in changes || "y" in changes) {
+    const token = canvas?.tokens?.get(tokenDoc.id) || tokenDoc.object;
+    if (token) clearTargetingLinesForToken(token);
   }
 });
 

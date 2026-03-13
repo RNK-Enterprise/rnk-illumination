@@ -9,6 +9,14 @@ import { isValidSymbol, sanitizeSymbol } from './targeting.js';
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
+ * Check if a user is GM or Co-GM (standalone for use in static methods)
+ */
+function isCoGM(user) {
+  if (!user) return false;
+  return user.isGM || Boolean(user.getFlag && user.getFlag(MODULE_ID, 'coGM'));
+}
+
+/**
  * GM Illumination Hub - ApplicationV2
  */
 export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -69,14 +77,40 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const gmUsers = game.users
       .filter(u => this._isCoGM(u))
-      .map(user => ({
-        id: user.id,
-        name: user.name,
-        avatar: user.avatar,
-        color: sanitizeColor(user.color),
-        isGM: user.isGM,
-        isCoGM: !user.isGM && this._isCoGM(user)
-      }));
+      .map(user => {
+        const s = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+        return {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          color: sanitizeColor(user.color),
+          isGM: user.isGM,
+          isCoGM: !user.isGM && this._isCoGM(user),
+          settingsColor: sanitizeColor(s.color)
+        };
+      });
+
+    // Other admin users (not the current user) with full settings for their own control rows.
+    // Includes both actual Foundry GMs and players promoted to Co-GM via module flag.
+    const coGMUsers = game.users
+      .filter(u => u.id !== game.user.id && this._isCoGM(u))
+      .map(user => {
+        const settings = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
+        return {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          assignedToken: user.getFlag(MODULE_ID, 'assignedTokenId') || '',
+          settings: {
+            color: sanitizeColor(settings.color),
+            effect: settings.effect || DEFAULT_SETTINGS.effect,
+            symbol: sanitizeSymbol(settings.symbol),
+            intensity: settings.intensity || DEFAULT_SETTINGS.intensity,
+            range: settings.range || DEFAULT_SETTINGS.range,
+            customSymbol: settings.customSymbol || ''
+          }
+        };
+      });
 
     const tokens = canvas?.tokens?.placeables?.map(t => ({
       id: t.id,
@@ -84,8 +118,10 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     })) || [];
 
     const isCurrentUserGM = game.user.isGM;
+    // Regular users: exclude current user AND Co-GMs (they get their own section)
+    const coGMIds = new Set(coGMUsers.map(u => u.id));
     const users = game.users
-      .filter(u => u.id !== game.user.id)
+      .filter(u => u.id !== game.user.id && !coGMIds.has(u.id))
       .map(user => {
         const settings = user.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
         return {
@@ -122,6 +158,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         assignedToken: gmAssignedToken
       },
       gmUsers: gmUsers,
+      coGMUsers: coGMUsers,
       users: users,
       tokens: tokens,
       isCurrentUserGM: isCurrentUserGM,
@@ -224,10 +261,71 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       const gmAssignedToken = data.gmToken || null;
       await game.user.setFlag(MODULE_ID, 'assignedTokenId', gmAssignedToken);
 
+      // Save Co-GM settings from their dedicated control rows
+      const coGMUserObjs = game.users.filter(u => u.id !== game.user.id && isCoGM(u));
+      const coGMIdSet = new Set();
+      for (const user of coGMUserObjs) {
+        const coColor = data[`coGM_${user.id}_color`];
+        if (!coColor) continue; // no form fields for this user
+        coGMIdSet.add(user.id);
+
+        const coEffect = data[`coGM_${user.id}_effect`];
+        const coIntensity = parseFloat(data[`coGM_${user.id}_intensity`]) || DEFAULT_SETTINGS.intensity;
+        const coRange = parseInt(data[`coGM_${user.id}_range`]) || DEFAULT_SETTINGS.range;
+        const coCustomSymbol = (data[`coGM_${user.id}_customSymbol`] || '').trim();
+        const coSymbol = coCustomSymbol || data[`coGM_${user.id}_symbol`] || DEFAULT_SETTINGS.symbol;
+        const coAssignedToken = data[`coGM_${user.id}_token`] || '';
+
+        if (!/^#[0-9A-F]{6}$/i.test(coColor)) {
+          throw new Error(`Invalid color format for Co-GM ${user.name}`);
+        }
+        if (!AVAILABLE_EFFECTS.includes(coEffect)) {
+          throw new Error(`Invalid effect for Co-GM ${user.name}`);
+        }
+        if (!isValidSymbol(coSymbol)) {
+          throw new Error(`Invalid symbol for Co-GM ${user.name}`);
+        }
+        if (coIntensity < 0.1 || coIntensity > 3.0) {
+          throw new Error(`Intensity out of range for Co-GM ${user.name}`);
+        }
+        if (!AVAILABLE_RANGES.includes(coRange)) {
+          throw new Error(`Invalid range for Co-GM ${user.name}`);
+        }
+
+        const coSettings = {
+          color: coColor,
+          effect: coEffect,
+          symbol: coSymbol,
+          intensity: coIntensity,
+          range: coRange,
+          customSymbol: coCustomSymbol || ''
+        };
+
+        await user.setFlag(MODULE_ID, 'settings', coSettings);
+        await user.setFlag(MODULE_ID, 'assignedTokenId', coAssignedToken || null);
+
+        if (coAssignedToken) {
+          const token = canvas.tokens.get(coAssignedToken);
+          if (token && token.document) {
+            await token.document.setFlag(MODULE_ID, 'assignedUserId', user.id);
+          }
+        } else {
+          const lastAssigned = user.getFlag(MODULE_ID, 'assignedTokenId');
+          if (lastAssigned) {
+            const token = canvas.tokens.get(lastAssigned);
+            if (token && token.document) {
+              await token.document.unsetFlag(MODULE_ID, 'assignedUserId');
+            }
+          }
+        }
+      }
+
       // Only the actual GM can promote/demote Co-GMs.
       const currentUserIsGM = game.user?.isGM;
 
-      const editableUsers = currentUserIsGM ? game.users.filter(u => u.id !== game.user.id) : [game.user];
+      // Regular users (skip Co-GMs already handled above)
+      const editableUsers = (currentUserIsGM ? game.users.filter(u => u.id !== game.user.id) : [game.user])
+        .filter(u => !coGMIdSet.has(u.id));
 
       for (const user of editableUsers) {
         const color = data[`${user.id}_color`];
