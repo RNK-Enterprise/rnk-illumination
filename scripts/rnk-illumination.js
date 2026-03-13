@@ -111,7 +111,9 @@ function getTokenOwner(token) {
   if (!token) return null;
 
   // If the token has an assigned user, prefer that over ownership-derived user.
-  const assignedId = token.getFlag ? token.getFlag(MODULE_ID, 'assignedUserId') : token.document?.getFlag?.(MODULE_ID, 'assignedUserId');
+  const assignedId = (typeof token.getFlag === 'function')
+    ? token.getFlag(MODULE_ID, 'assignedUserId')
+    : token.document?.getFlag?.(MODULE_ID, 'assignedUserId');
   if (assignedId) {
     const assignedUser = game.users.get(assignedId);
     if (assignedUser) return assignedUser;

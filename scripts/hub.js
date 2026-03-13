@@ -175,8 +175,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
   static async _onSubmit(event, form, formData) {
     console.log('RNK™ Illumination | Form submitted');
     
-    if (!game.user?.isGM) {
-      ui.notifications.error("Only GMs can modify player settings");
+    if (!isCoGM(game.user)) {
+      ui.notifications.error("Only the GM or a designated Co-GM can modify player settings");
       return;
     }
 
@@ -227,7 +227,9 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       // Only the actual GM can promote/demote Co-GMs.
       const currentUserIsGM = game.user?.isGM;
 
-      for (const user of game.users.filter(u => u.id !== game.user.id)) {
+      const editableUsers = currentUserIsGM ? game.users.filter(u => u.id !== game.user.id) : [game.user];
+
+      for (const user of editableUsers) {
         const color = data[`${user.id}_color`];
         const effect = data[`${user.id}_effect`];
         const intensity = parseFloat(data[`${user.id}_intensity`]) || DEFAULT_SETTINGS.intensity;
@@ -265,6 +267,24 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         await user.setFlag(MODULE_ID, 'settings', settings);
         await user.setFlag(MODULE_ID, 'coGM', coGM);
         await user.setFlag(MODULE_ID, 'assignedTokenId', assignedToken || null);
+
+        // If a token was assigned, write it to the token itself so illumination
+        // uses the correct owner/setting regardless of ownership.
+        if (assignedToken) {
+          const token = canvas.tokens.get(assignedToken);
+          if (token && token.document) {
+            await token.document.setFlag(MODULE_ID, 'assignedUserId', user.id);
+          }
+        } else {
+          // Clear any assignment from previous selections
+          const lastAssigned = user.getFlag(MODULE_ID, 'assignedTokenId');
+          if (lastAssigned) {
+            const token = canvas.tokens.get(lastAssigned);
+            if (token && token.document) {
+              await token.document.unsetFlag(MODULE_ID, 'assignedUserId');
+            }
+          }
+        }
       }
 
       ui.notifications.info("GM and player settings updated");
