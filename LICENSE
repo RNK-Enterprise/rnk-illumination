@@ -1,21 +1,28 @@
-MIT License
+RNK Proprietary License
 
-Copyright (c) 2026 RNK-Enterprise
+Copyright (c) 2026 RNK™ Enterprises. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software, source code, artwork, documentation, and all related assets for
+RNK™ Illumination are proprietary intellectual property owned by RNK™ Enterprises.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is granted to end users to install and use this module for personal or
+authorized table use within Foundry Virtual Tabletop.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+You may not, without prior written permission from RNK™ Enterprises:
+
+1. Copy, redistribute, publish, sublicense, sell, lease, or otherwise make the
+	source code or packaged module available to third parties.
+2. Modify, adapt, reverse engineer, decompile, disassemble, or create derivative
+	works based on this software.
+3. Remove, alter, or obscure any copyright, trademark, or attribution notices.
+4. Rehost this project, its releases, or any of its assets on another service or
+	repository.
+
+This software is provided "AS IS" without warranties of any kind, express or implied,
+including but not limited to the warranties of merchantability, fitness for a
+particular purpose, and noninfringement. In no event shall RNK™ Enterprises be liable
+for any claim, damages, or other liability arising from or related to the software or
+the use of the software.
+
+For licensing requests or permissions beyond the limited use granted above, contact
+RNK™ Enterprises.

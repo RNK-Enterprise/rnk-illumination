@@ -1,5 +1,5 @@
 ﻿/**
- * RNK Illumination Module
+ * RNK™ Illumination Module
  * Advanced token illumination with custom underglow effects and hubs.
  */
 
@@ -7,6 +7,14 @@ import { DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
 import { clearTargetingIndicators, hideTargetingIndicator, showTargetingIndicator } from './targeting.js';
 import { applyEffect, removeEffect, sanitizeColor } from './effects.js';
 import { openIlluminationHub, RNKGMHub } from './hub.js';
+import {
+  clearTargetingLines,
+  clearTargetingLinesForToken,
+  configureTargetingLines,
+  drawTargetingLine,
+  removeTargetingLine,
+  updateTokenTargetingLines
+} from './targeting-lines.js';
 
 // Debounce timer for refresh all
 let _refreshAllTimeout = null;
@@ -99,6 +107,8 @@ function getUserToken(user) {
   }) || null;
 }
 
+configureTargetingLines({ getUserToken });
+
 /**
  * Get the owner of a token
  */
@@ -150,6 +160,43 @@ function isUserTargeting(user) {
   return (user?.targets?.size ?? 0) > 0;
 }
 
+function getHoveredToken() {
+  if (!canvas?.tokens?.placeables) return null;
+  return canvas.tokens.placeables.find(token => token.hover) || null;
+}
+
+async function assignTokenToUser(token, nextUserId) {
+  if (!token) return;
+
+  const tokenDocument = token.document ?? token;
+  const previousUserId = tokenDocument.getFlag?.(MODULE_ID, 'assignedUserId') || null;
+
+  if (previousUserId && previousUserId !== nextUserId) {
+    const previousUser = game.users.get(previousUserId);
+    if (previousUser) {
+      await previousUser.setFlag(MODULE_ID, 'assignedTokenId', null);
+    }
+  }
+
+  if (!nextUserId) {
+    await tokenDocument.unsetFlag(MODULE_ID, 'assignedUserId');
+    return;
+  }
+
+  const nextUser = game.users.get(nextUserId);
+  if (!nextUser) return;
+
+  const previousTokenId = nextUser.getFlag(MODULE_ID, 'assignedTokenId') || null;
+  if (previousTokenId && previousTokenId !== token.id) {
+    const previousToken = canvas.tokens.get(previousTokenId);
+    const previousTokenDocument = previousToken?.document ?? previousToken;
+    await previousTokenDocument?.unsetFlag?.(MODULE_ID, 'assignedUserId');
+  }
+
+  await nextUser.setFlag(MODULE_ID, 'assignedTokenId', token.id);
+  await tokenDocument.setFlag(MODULE_ID, 'assignedUserId', nextUserId);
+}
+
 /**
  * Refresh illumination for a single token
  */
@@ -192,11 +239,11 @@ export function refreshAllTokenIllumination() {
 Hooks.on('init', () => {
   // Register keybinding for targeting hovered token
   game.keybindings.register(MODULE_ID, 'targetHovered', {
-    name: 'Target Hovered Token',
-    hint: 'Toggle targeting on the currently hovered token',
+    name: 'rnk-illumination.keybindings.targetHovered.name',
+    hint: 'rnk-illumination.keybindings.targetHovered.hint',
     editable: [{ key: 'KeyT', modifiers: [foundry.helpers.interaction.KeyboardManager.MODIFIER_KEYS.SHIFT] }],
     onDown: () => {
-      const hoveredToken = canvas.tokens._hover;
+      const hoveredToken = getHoveredToken();
       if (hoveredToken) {
         hoveredToken.setTarget(!hoveredToken.isTargeted, { user: game.user });
       }
@@ -208,7 +255,7 @@ Hooks.on('ready', () => {
   // register the hidden setting that tracks which token the GM has chosen as
   // the active origin for targeting lines.
   game.settings.register(MODULE_ID, 'gmOriginTokenId', {
-    name: 'GM Target Origin Token ID',
+    name: 'rnk-illumination.settings.gmOrigin.name',
     scope: 'world',
     config: false,
     default: null,
@@ -217,9 +264,9 @@ Hooks.on('ready', () => {
 
   if (game.user?.isGM) {
     game.settings.registerMenu(MODULE_ID, 'gmHub', {
-      name: 'RNK Illumination Hub',
-      label: 'Open Hub',
-      hint: 'Configure player illumination colors and effects',
+      name: 'rnk-illumination.ui.hub.title',
+      label: 'rnk-illumination.ui.hub.open',
+      hint: 'rnk-illumination.ui.hub.hint',
       icon: 'fas fa-palette',
       type: RNKGMHub,
       restricted: true
@@ -248,7 +295,7 @@ Hooks.on('targetToken', (user, token, isTargeted) => {
         if (isTargeted) {
           // Clear any old lines before drawing new one
           removeTargetingLine(user, token);
-          drawTargetingLine(user, token, settings.color);
+          drawTargetingLine(user, token, settings.color, settings.symbol);
         } else {
           removeTargetingLine(user, token);
         }
@@ -274,14 +321,11 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
   if ("x" in changes || "y" in changes || "elevation" in changes) {
     if (token) {
       clearTargetingLinesForToken(token);
-      // Foundry's default token animation is ~300ms; wait for it to finish
-      // before redrawing lines at the new position.
-      const animDuration = (canvas.scene?.getFlag('core', 'animationSpeed') ?? 5) * 100;
+      // Short delay to let the token arrive at its new position before redrawing.
       setTimeout(() => {
-        // Re-fetch the token to get the updated visual position
         const t = canvas?.tokens?.get(tokenDoc.id);
         if (t) updateTokenTargetingLines(t);
-      }, animDuration + 50);
+      }, 350);
     }
   }
 });
@@ -349,7 +393,7 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     game.users.forEach(u => {
       u.targets.forEach(t => {
         const settings = getUserSettings(u.id);
-        drawTargetingLine(u, t, settings.color);
+        drawTargetingLine(u, t, settings.color, settings.symbol);
       });
     });
   });
@@ -357,7 +401,7 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
   // Assign this token to a specific user (GM/Co-GM or player)
   const assignBtn = document.createElement('a');
   assignBtn.classList.add('control-icon', 'rnk-assign-btn');
-  assignBtn.title = 'Assign token to user';
+  assignBtn.title = game.i18n.localize('rnk-illumination.ui.token.assignButton');
   assignBtn.innerHTML = '<i class="fas fa-user-tag"></i>';
   assignBtn.addEventListener('click', async (ev) => {
     ev.preventDefault();
@@ -365,14 +409,17 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
 
     const currentAssign = token.getFlag(MODULE_ID, 'assignedUserId') || '';
     const options = [
-      { value: '', label: 'None (default owner)' }
+      { value: '', label: game.i18n.localize('rnk-illumination.ui.token.assignNone') }
     ].concat(
-      game.users.map(u => ({ value: u.id, label: `${u.name}${u.isGM ? ' (GM)' : ''}` }))
+      game.users.map(u => ({
+        value: u.id,
+        label: `${u.name}${u.isGM ? ` (${game.i18n.localize('rnk-illumination.ui.roles.gmShort')})` : ''}`
+      }))
     );
 
     const content = `
       <div class="form-group">
-        <label>Select user to assign this token to:</label>
+        <label>${game.i18n.localize('rnk-illumination.ui.token.assignPrompt')}</label>
         <select id="rnk-assign-user" style="width: 100%;">
           ${options.map(o => `<option value="${o.value}" ${o.value === currentAssign ? 'selected' : ''}>${o.label}</option>`).join('')}
         </select>
@@ -380,21 +427,24 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     `;
 
     new Dialog({
-      title: 'Assign Token',
+      title: game.i18n.localize('rnk-illumination.ui.token.assignDialogTitle'),
       content,
       buttons: {
         confirm: {
           icon: '<i class="fas fa-check"></i>',
-          label: 'Assign',
+          label: game.i18n.localize('rnk-illumination.ui.token.assignConfirm'),
           callback: async (html) => {
-            const selected = html.find('#rnk-assign-user')[0].value;
-            await token.setFlag(MODULE_ID, 'assignedUserId', selected || null);
+            const selectedElement = html?.find
+              ? html.find('#rnk-assign-user')[0]
+              : html?.querySelector?.('#rnk-assign-user');
+            const selected = selectedElement?.value || '';
+            await assignTokenToUser(token, selected || null);
             refreshAllTokenIllumination();
           }
         },
         cancel: {
           icon: '<i class="fas fa-times"></i>',
-          label: 'Cancel'
+          label: game.i18n.localize('rnk-illumination.ui.token.assignCancel')
         }
       },
       default: 'confirm'
@@ -434,10 +484,10 @@ Hooks.on('canvasTearDown', () => {
 // Button Registration Standard
 Hooks.on('getSceneControlButtons', (controls) => {
   if (!controls) return controls;
-  if (!game.user?.isGM) return controls;
+  if (!isCoGM(game.user)) return controls;
   const controlData = {
     name: MODULE_ID,
-    title: 'RNK Illumination',
+    title: game.i18n.localize('rnk-illumination.ui.controls.title'),
     icon: 'fa-solid fa-sun',
     order: 99999,
     layer: 'controls',
@@ -445,7 +495,7 @@ Hooks.on('getSceneControlButtons', (controls) => {
     tools: [
       {
         name: 'illumination-hub',
-        title: 'Open Hub',
+        title: game.i18n.localize('rnk-illumination.ui.hub.open'),
         icon: 'fa-solid fa-palette',
         onChange: (active) => {
           if (!active) return;
@@ -467,8 +517,9 @@ Hooks.on('getSceneControlButtons', (controls) => {
 });
 
 Hooks.on('renderSceneControls', (app, html, data) => {
-  if (!game.user?.isGM) return;
-  const button = html.querySelector(`[data-control="${MODULE_ID}"]`) ||
+  if (!isCoGM(game.user)) return;
+  const root = html instanceof HTMLElement ? html : (html?.[0] ?? html?.element ?? html);
+  const button = root?.querySelector?.(`[data-control="${MODULE_ID}"]`) ||
                  document.querySelector(`[data-control="${MODULE_ID}"]`);
   if (!button) return;
   button.classList.add('module-control-btn');
@@ -480,283 +531,6 @@ Hooks.on('renderSceneControls', (app, html, data) => {
   });
   button.dataset.moduleHandler = 'true';
 });
-
-// Targeting lines - Map of user IDs to Maps of target IDs to Graphics objects
-const _targetingLines = new Map();
-
-/**
- * Get or create targeting line graphics for a user-target pair
- */
-function getTargetingLineGraphics(userId, targetId) {
-  if (!_targetingLines.has(userId)) {
-    _targetingLines.set(userId, new Map());
-  }
-  
-  const userLines = _targetingLines.get(userId);
-  if (!userLines.has(targetId)) {
-    const graphics = new PIXI.Graphics();
-    graphics.name = `rnk-targeting-${userId}-${targetId}`;
-    canvas.controls.addChild(graphics);
-    graphics.zIndex = 100;
-    userLines.set(targetId, graphics);
-  }
-  
-  return userLines.get(targetId);
-}
-
-/**
- * Draw targeting line from user token to target
- * @param {User} user - The user doing the targeting
- * @param {Token} targetToken - The targeted token
- * @param {string} color - The color for the line
- * @param {string} symbol - The symbol/icon for markers
- */
-function drawTargetingLine(user, targetToken, color) {
-  if (!user || !targetToken || !canvas?.ready) return;
-
-  const userToken = getUserToken(user);
-  if (!userToken) return;
-
-  const userId = user.id;
-  const targetId = targetToken.id;
-  const graphics = getTargetingLineGraphics(userId, targetId);
-
-  // Clear previous drawings and remove all children (text/icons)
-  try {
-    // Destroy all child objects first
-    while (graphics.children.length > 0) {
-      graphics.children[0]?.destroy({ children: true });
-    }
-    graphics.clear();
-    // Mark geometry as dirty to force PIXI to update
-    if (graphics.geometry) graphics.geometry.invalidate();
-  } catch (err) {
-    console.error('RNK™ Illumination | Error clearing graphics:', err);
-  }
-
-  const startX = userToken.center.x;
-  const startY = userToken.center.y;
-  const endX = targetToken.center.x;
-  const endY = targetToken.center.y;
-  
-  const colorValue = Color.from(color).valueOf();
-
-  // Calculate distance
-  const pixelDistance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
-  const gridDistance = pixelDistance / canvas.grid.size;
-  const unitDistance = gridDistance * (canvas.scene.grid.distance || 5);
-  const units = canvas.scene.grid.units || 'ft';
-
-  // Draw line with user's color
-  graphics.lineStyle(4, colorValue, 1);
-  graphics.moveTo(startX, startY);
-  graphics.lineTo(endX, endY);
-  
-  // Draw measurement markers
-  const markerInterval = 5; // feet
-  const numMarkers = Math.floor(unitDistance / markerInterval);
-
-  if (numMarkers > 0) {
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const totalLength = Math.sqrt(dx * dx + dy * dy);
-    const unitVectorX = dx / totalLength;
-    const unitVectorY = dy / totalLength;
-
-    for (let i = 1; i <= numMarkers; i++) {
-      const distance = i * markerInterval;
-      const pixelDist = (distance / (canvas.scene.grid.distance || 5)) * canvas.grid.size;
-      const markerX = startX + unitVectorX * pixelDist;
-      const markerY = startY + unitVectorY * pixelDist;
-
-      // Draw directional arrow at each marker pointing toward target
-      const arrowSize = 8;
-      const lineAngle = Math.atan2(dy, dx);
-      const aSpread = Math.PI / 6;
-      graphics.lineStyle(0);
-      graphics.beginFill(colorValue, 0.9);
-      graphics.moveTo(
-        markerX + Math.cos(lineAngle) * arrowSize,
-        markerY + Math.sin(lineAngle) * arrowSize
-      );
-      graphics.lineTo(
-        markerX - Math.cos(lineAngle - aSpread) * arrowSize,
-        markerY - Math.sin(lineAngle - aSpread) * arrowSize
-      );
-      graphics.lineTo(
-        markerX - Math.cos(lineAngle + aSpread) * arrowSize,
-        markerY - Math.sin(lineAngle + aSpread) * arrowSize
-      );
-      graphics.endFill();
-
-      // Draw distance label
-      const text = new PIXI.Text(`${distance}${units}`, {
-        fontFamily: 'Arial',
-        fontSize: 14,
-        fill: 0xFFFFFF,
-        align: 'center',
-        stroke: 0x000000,
-        strokeThickness: 3
-      });
-      text.anchor.set(0.5, 0.5);
-      text.position.set(markerX, markerY - 15);
-      graphics.addChild(text);
-    }
-  }
-
-  // Draw arrows
-  const angle = Math.atan2(endY - startY, endX - startX);
-  const arrowLength = 15;
-  const arrowAngle = Math.PI / 6; // 30 degrees
-
-  graphics.lineStyle(0);
-  graphics.beginFill(colorValue, 1);
-  graphics.moveTo(endX, endY);
-  graphics.lineTo(
-    endX - arrowLength * Math.cos(angle - arrowAngle),
-    endY - arrowLength * Math.sin(angle - arrowAngle)
-  );
-  graphics.lineTo(
-    endX - arrowLength * Math.cos(angle + arrowAngle),
-    endY - arrowLength * Math.sin(angle + arrowAngle)
-  );
-  graphics.lineTo(endX, endY);
-  graphics.endFill();
-
-  // Mark as needing update for PIXI rendering
-  if (graphics.geometry) graphics.geometry.invalidate();
-}
-
-/**
- * Remove targeting line between two tokens
- * @param {User} user - The user who was targeting
- * @param {Token} targetToken - The targeted token
- */
-function removeTargetingLine(user, targetToken) {
-  if (!user || !targetToken) return;
-  const userId = user.id;
-  const targetId = targetToken.id;
-
-  if (_targetingLines.has(userId)) {
-    const userLines = _targetingLines.get(userId);
-    if (userLines.has(targetId)) {
-      const graphics = userLines.get(targetId);
-      try {
-        // Destroy all children first
-        while (graphics.children.length > 0) {
-          graphics.children[0]?.destroy({ children: true });
-        }
-        if (!graphics.destroyed) {
-          graphics.clear();
-          if (graphics.geometry) graphics.geometry.invalidate();
-          graphics.destroy({ children: true });
-        }
-      } catch (err) {
-        console.error('RNK™ Illumination | Error removing targeting line:', err);
-      }
-      userLines.delete(targetId);
-
-      if (userLines.size === 0) {
-        _targetingLines.delete(userId);
-      }
-    }
-  }
-}
-
-/**
- * Update all targeting lines associated with a token (as source or target)
- */
-function updateTokenTargetingLines(token) {
-  if (!token || !canvas?.ready) return;
-
-  // 1. Update lines where this token is the SOURCE (user token)
-  game.users.forEach(user => {
-    const userToken = getUserToken(user);
-    if (userToken === token) {
-      user.targets.forEach(target => {
-        const settings = getUserSettings(user.id);
-        drawTargetingLine(user, target, settings.color);
-      });
-    }
-  });
-
-  // 2. Update lines where this token is the TARGET
-  game.users.forEach(user => {
-    if (user.targets.has(token)) {
-      const settings = getUserSettings(user.id);
-      drawTargetingLine(user, token, settings.color);
-    }
-  });
-}
-
-/**
- * Cleanup targeting lines when a token is deleted
- */
-function clearTargetingLinesForToken(token) {
-  if (!token) return;
-  const tokenId = token.id;
-
-  // Remove lines where this token was the target
-  _targetingLines.forEach((userLines, userId) => {
-    if (userLines.has(tokenId)) {
-      const graphics = userLines.get(tokenId);
-      try {
-        while (graphics.children.length > 0) {
-          graphics.children[0]?.destroy({ children: true });
-        }
-        if (!graphics.destroyed) {
-          graphics.clear();
-          if (graphics.geometry) graphics.geometry.invalidate();
-          graphics.destroy({ children: true });
-        }
-      } catch (err) { /* ignore */ }
-      userLines.delete(tokenId);
-    }
-    if (userLines.size === 0) _targetingLines.delete(userId);
-  });
-
-  // Remove lines where this token was the source (user's character token)
-  game.users.forEach(user => {
-    const userToken = getUserToken(user);
-    if (userToken === token && _targetingLines.has(user.id)) {
-      const userLines = _targetingLines.get(user.id);
-      userLines.forEach(g => {
-        try {
-          while (g.children.length > 0) {
-            g.children[0]?.destroy({ children: true });
-          }
-          if (!g.destroyed) {
-            g.clear();
-            if (g.geometry) g.geometry.invalidate();
-            g.destroy({ children: true });
-          }
-        } catch (err) { /* ignore */ }
-      });
-      _targetingLines.delete(user.id);
-    }
-  });
-}
-
-/**
- * Clear all targeting lines
- */
-function clearTargetingLines() {
-  _targetingLines.forEach((userLines) => {
-    userLines.forEach((graphics) => {
-      try {
-        while (graphics.children.length > 0) {
-          graphics.children[0]?.destroy({ children: true });
-        }
-        if (!graphics.destroyed) {
-          graphics.clear();
-          if (graphics.geometry) graphics.geometry.invalidate();
-          graphics.destroy({ children: true });
-        }
-      } catch (err) { /* ignore */ }
-    });
-  });
-  _targetingLines.clear();
-}
 
 // Global exposure
 globalThis.refreshAllTokenIllumination = refreshAllTokenIllumination;

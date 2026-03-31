@@ -8,6 +8,29 @@ import { isValidSymbol, sanitizeSymbol } from './targeting.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+function localize(key) {
+  return game.i18n.localize(key);
+}
+
+async function syncAssignedToken(user, nextTokenId) {
+  const previousTokenId = user.getFlag(MODULE_ID, 'assignedTokenId') || null;
+  if (previousTokenId && previousTokenId !== nextTokenId) {
+    const previousToken = canvas.tokens.get(previousTokenId);
+    if (previousToken?.document) {
+      await previousToken.document.unsetFlag(MODULE_ID, 'assignedUserId');
+    }
+  }
+
+  await user.setFlag(MODULE_ID, 'assignedTokenId', nextTokenId || null);
+
+  if (nextTokenId) {
+    const token = canvas.tokens.get(nextTokenId);
+    if (token?.document) {
+      await token.document.setFlag(MODULE_ID, 'assignedUserId', user.id);
+    }
+  }
+}
+
 /**
  * Check if a user is GM or Co-GM (standalone for use in static methods)
  */
@@ -57,7 +80,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
   open() {
     if (!this._isCoGM(game.user)) {
-      ui.notifications.warn('Only the GM or a designated Co-GM can open the Illumination Hub.');
+      ui.notifications.warn(localize('rnk-illumination.notifications.hubAccessWarn'));
       return;
     }
     this.render({ force: true });
@@ -114,7 +137,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const tokens = canvas?.tokens?.placeables?.map(t => ({
       id: t.id,
-      name: `${t.name} (${t.actor?.name ?? 'No Actor'})`
+      name: `${t.name} (${t.actor?.name ?? localize('rnk-illumination.ui.hub.noActor')})`
     })) || [];
 
     const isCurrentUserGM = game.user.isGM;
@@ -187,7 +210,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         const target = btn.dataset.target;
 
         if (typeof FilePicker !== 'function') {
-          ui.notifications.error('FilePicker is not available in this environment.');
+          ui.notifications.error(localize('rnk-illumination.notifications.filePickerUnavailable'));
           this.element.querySelector(`[name="${target}"]`).focus();
           return;
         }
@@ -211,17 +234,19 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async _onSubmit(event, form, formData) {
     console.log('RNK™ Illumination | Form submitted');
+
+    const formElement = form instanceof HTMLFormElement ? form : event?.currentTarget;
     
     if (!isCoGM(game.user)) {
-      ui.notifications.error("Only the GM or a designated Co-GM can modify player settings");
+      ui.notifications.error(localize('rnk-illumination.notifications.hubSubmitDenied'));
       return;
     }
 
     // Disable the submit button to prevent multiple submissions
-    const submitButton = this.element?.querySelector('.rnk-illumination-save');
+    const submitButton = formElement?.querySelector('.rnk-illumination-save');
     if (submitButton) {
       submitButton.disabled = true;
-      submitButton.textContent = 'Saving...';
+      submitButton.textContent = localize('rnk-illumination.ui.hub.saving');
     }
 
     try {
@@ -256,10 +281,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         range: gmRange
       };
       await game.user.setFlag(MODULE_ID, 'settings', gmSettings);
-
-      // Allow the GM to pin a specific token to themselves for consistent origin.
       const gmAssignedToken = data.gmToken || null;
-      await game.user.setFlag(MODULE_ID, 'assignedTokenId', gmAssignedToken);
+      await syncAssignedToken(game.user, gmAssignedToken);
 
       // Save Co-GM settings from their dedicated control rows
       const coGMUserObjs = game.users.filter(u => u.id !== game.user.id && isCoGM(u));
@@ -302,22 +325,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         };
 
         await user.setFlag(MODULE_ID, 'settings', coSettings);
-        await user.setFlag(MODULE_ID, 'assignedTokenId', coAssignedToken || null);
-
-        if (coAssignedToken) {
-          const token = canvas.tokens.get(coAssignedToken);
-          if (token && token.document) {
-            await token.document.setFlag(MODULE_ID, 'assignedUserId', user.id);
-          }
-        } else {
-          const lastAssigned = user.getFlag(MODULE_ID, 'assignedTokenId');
-          if (lastAssigned) {
-            const token = canvas.tokens.get(lastAssigned);
-            if (token && token.document) {
-              await token.document.unsetFlag(MODULE_ID, 'assignedUserId');
-            }
-          }
-        }
+        await syncAssignedToken(user, coAssignedToken || null);
       }
 
       // Only the actual GM can promote/demote Co-GMs.
@@ -364,28 +372,10 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
         await user.setFlag(MODULE_ID, 'settings', settings);
         await user.setFlag(MODULE_ID, 'coGM', coGM);
-        await user.setFlag(MODULE_ID, 'assignedTokenId', assignedToken || null);
-
-        // If a token was assigned, write it to the token itself so illumination
-        // uses the correct owner/setting regardless of ownership.
-        if (assignedToken) {
-          const token = canvas.tokens.get(assignedToken);
-          if (token && token.document) {
-            await token.document.setFlag(MODULE_ID, 'assignedUserId', user.id);
-          }
-        } else {
-          // Clear any assignment from previous selections
-          const lastAssigned = user.getFlag(MODULE_ID, 'assignedTokenId');
-          if (lastAssigned) {
-            const token = canvas.tokens.get(lastAssigned);
-            if (token && token.document) {
-              await token.document.unsetFlag(MODULE_ID, 'assignedUserId');
-            }
-          }
-        }
+        await syncAssignedToken(user, assignedToken || null);
       }
 
-      ui.notifications.info("GM and player settings updated");
+      ui.notifications.info(localize('rnk-illumination.notifications.settingsUpdated'));
       console.log('RNK™ Illumination | Settings saved successfully');
       setTimeout(() => {
         try {
@@ -393,31 +383,31 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         } catch (e) {}
       }, 100);
       // Re-enable the save button
-      const saveButton = this.element?.querySelector('button[type="submit"]');
+      const saveButton = formElement?.querySelector('button[type="submit"]');
       if (saveButton) {
         saveButton.disabled = false;
-        saveButton.textContent = "Save Settings";
+        saveButton.textContent = localize('rnk-illumination.ui.hub.saveAll');
       }
     } catch (err) {
       console.error("RNK™ Illumination | Failed to save settings", err);
-      ui.notifications.error("Failed to save illumination settings. Check console for details.");
+      ui.notifications.error(localize('rnk-illumination.notifications.settingsSaveFailed'));
       // Re-enable the save button on error
-      const saveButton = this.element?.querySelector('button[type="submit"]');
+      const saveButton = formElement?.querySelector('button[type="submit"]');
       if (saveButton) {
         saveButton.disabled = false;
-        saveButton.textContent = "Save Settings";
+        saveButton.textContent = localize('rnk-illumination.ui.hub.saveAll');
       }
     }
   }
 }
 
 /**
- * Open the GM illumination hub (GM only)
+ * Open the illumination hub for a GM or designated Co-GM.
  */
 export function openIlluminationHub() {
-  if (!game.user?.isGM) {
-    ui.notifications.error("Only Game Masters can access the Illumination Hub");
+  if (!isCoGM(game.user)) {
+    ui.notifications.error(localize('rnk-illumination.notifications.hubAccessDenied'));
     return;
   }
-  new RNKGMHub().render({ force: true });
+  new RNKGMHub().open();
 }

@@ -2,8 +2,8 @@
   <!-- GM/Co-GM Display Cards -->
   <div class="rnk-illumination-gm-section">
     <div class="rnk-illumination-gm-header">
-      <div class="rnk-illumination-title">Illumination Administrators</div>
-      <div class="rnk-illumination-subtitle">GM + Co-GM users can configure the module for everyone.</div>
+      <div class="rnk-illumination-title">{{localize "rnk-illumination.ui.hub.adminTitle"}}</div>
+      <div class="rnk-illumination-subtitle">{{localize "rnk-illumination.ui.hub.adminSubtitle"}}</div>
     </div>
     <div class="rnk-illumination-gm-grid">
       {{#each gmUsers}}
@@ -13,7 +13,7 @@
         </div>
         <div class="rnk-illumination-gm-info">
           <span class="rnk-illumination-name">{{this.name}}</span>
-          <span class="rnk-illumination-role">{{#if this.isGM}}Game Master{{else}}Co-GM{{/if}}</span>
+          <span class="rnk-illumination-role">{{#if this.isGM}}{{localize "rnk-illumination.ui.roles.gm"}}{{else}}{{localize "rnk-illumination.ui.roles.cogm"}}{{/if}}</span>
         </div>
       </div>
       {{/each}}
@@ -25,35 +25,34 @@
     <div class="rnk-illumination-gm-card">
       <div class="rnk-illumination-avatar-container">
         <img class="rnk-illumination-avatar" src="{{gm.avatar}}" alt="{{gm.name}}" style="border-color: {{gmSettings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
-        <button type="button" class="rnk-avatar-upload-btn" data-user="{{gm.id}}" title="Upload Avatar">📷</button>
       </div>
       <div class="rnk-illumination-gm-info">
         <span class="rnk-illumination-name">{{gm.name}}</span>
-        <span class="rnk-illumination-role">{{#if gm.isGM}}Game Master{{else}}Co-GM{{/if}}</span>
+        <span class="rnk-illumination-role">{{#if gm.isGM}}{{localize "rnk-illumination.ui.roles.gm"}}{{else}}{{localize "rnk-illumination.ui.roles.cogm"}}{{/if}}</span>
       </div>
-      <input type="color" name="gmColor" value="{{gmSettings.color}}" title="Illumination Color">
-      <select name="gmEffect" title="Effect Style">
+      <input type="color" name="gmColor" value="{{gmSettings.color}}" title="{{localize "rnk-illumination.ui.hub.color"}}">
+      <select name="gmEffect" title="{{localize "rnk-illumination.ui.hub.effect"}}">
         {{#each effects}}
-        <option value="{{this}}" {{#if (eq this ../gmSettings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}None (Disabled){{else}}{{this}}{{/if}}</option>
+        <option value="{{this}}" {{#if (eq this ../gmSettings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}{{localize "rnk-illumination.ui.hub.effectDisabled"}}{{else}}{{this}}{{/if}}</option>
         {{/each}}
       </select>
-      <select name="gmSymbol" title="Target Symbol">
+      <select name="gmSymbol" title="{{localize "rnk-illumination.ui.hub.symbol"}}">
         {{#each symbols}}
         <option value="{{this}}" {{#if (eq this ../gmSettings.symbol)}}selected{{/if}}>{{this}}</option>
         {{/each}}
       </select>
       <div class="rnk-illumination-custom">
-        <input type="text" name="gmCustomSymbol" value="{{gmSettings.customSymbol}}" placeholder="Image URL or path">
-        <button type="button" class="rnk-upload-btn" data-target="gmCustomSymbol">Upload</button>
+        <input type="text" name="gmCustomSymbol" value="{{gmSettings.customSymbol}}" placeholder="{{localize "rnk-illumination.ui.hub.customSymbolPlaceholder"}}">
+        <button type="button" class="rnk-upload-btn" data-target="gmCustomSymbol">{{localize "rnk-illumination.ui.hub.upload"}}</button>
       </div>
-      <input type="number" name="gmIntensity" value="{{gmSettings.intensity}}" min="0.1" max="3.0" step="0.1" title="Effect Intensity">
-      <select name="gmRange" title="Effect Range">
+      <input type="number" name="gmIntensity" value="{{gmSettings.intensity}}" min="0.1" max="3.0" step="0.1" title="{{localize "rnk-illumination.ui.hub.intensity"}}">
+      <select name="gmRange" title="{{localize "rnk-illumination.ui.hub.range"}}">
         {{#each ranges}}
-        <option value="{{this}}" {{#if (eq this ../gmSettings.range)}}selected{{/if}}>Range: {{this}}px</option>
+        <option value="{{this}}" {{#if (eq this ../gmSettings.range)}}selected{{/if}}>{{localize "rnk-illumination.ui.hub.rangeLabel"}} {{this}}px</option>
         {{/each}}
       </select>
-      <select name="gmToken" title="Assigned Token">
-        <option value="" {{#unless gm.assignedToken}}selected{{/unless}}>Auto (Owned Token)</option>
+      <select name="gmToken" title="{{localize "rnk-illumination.ui.hub.assignedToken"}}">
+        <option value="" {{#unless gm.assignedToken}}selected{{/unless}}>{{localize "rnk-illumination.ui.hub.autoOwnedToken"}}</option>
         {{#each ../tokens}}
         <option value="{{this.id}}" {{#if (eq this.id ../gm.assignedToken)}}selected{{/if}}>{{this.name}}</option>
         {{/each}}
@@ -67,35 +66,34 @@
     <div class="rnk-illumination-gm-card">
       <div class="rnk-illumination-avatar-container">
         <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{this.settings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
-        <button type="button" class="rnk-avatar-upload-btn" data-user="{{this.id}}" title="Upload Avatar">📷</button>
       </div>
       <div class="rnk-illumination-gm-info">
         <span class="rnk-illumination-name">{{this.name}}</span>
-        <span class="rnk-illumination-role">Co-GM</span>
+        <span class="rnk-illumination-role">{{localize "rnk-illumination.ui.roles.cogm"}}</span>
       </div>
-      <input type="color" name="coGM_{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
-      <select name="coGM_{{this.id}}_effect" title="Effect Style">
+      <input type="color" name="coGM_{{this.id}}_color" value="{{this.settings.color}}" title="{{localize "rnk-illumination.ui.hub.color"}}">
+      <select name="coGM_{{this.id}}_effect" title="{{localize "rnk-illumination.ui.hub.effect"}}">
         {{#each ../effects}}
-        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}None (Disabled){{else}}{{this}}{{/if}}</option>
+        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}{{localize "rnk-illumination.ui.hub.effectDisabled"}}{{else}}{{this}}{{/if}}</option>
         {{/each}}
       </select>
-      <select name="coGM_{{this.id}}_symbol" title="Target Symbol">
+      <select name="coGM_{{this.id}}_symbol" title="{{localize "rnk-illumination.ui.hub.symbol"}}">
         {{#each ../symbols}}
         <option value="{{this}}" {{#if (eq this ../this.settings.symbol)}}selected{{/if}}>{{this}}</option>
         {{/each}}
       </select>
       <div class="rnk-illumination-custom">
-        <input type="text" name="coGM_{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="Image URL or path">
-        <button type="button" class="rnk-upload-btn" data-target="coGM_{{this.id}}_customSymbol">Upload</button>
+        <input type="text" name="coGM_{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="{{localize "rnk-illumination.ui.hub.customSymbolPlaceholder"}}">
+        <button type="button" class="rnk-upload-btn" data-target="coGM_{{this.id}}_customSymbol">{{localize "rnk-illumination.ui.hub.upload"}}</button>
       </div>
-      <input type="number" name="coGM_{{this.id}}_intensity" value="{{this.settings.intensity}}" min="0.1" max="3.0" step="0.1" title="Effect Intensity">
-      <select name="coGM_{{this.id}}_range" title="Effect Range">
+      <input type="number" name="coGM_{{this.id}}_intensity" value="{{this.settings.intensity}}" min="0.1" max="3.0" step="0.1" title="{{localize "rnk-illumination.ui.hub.intensity"}}">
+      <select name="coGM_{{this.id}}_range" title="{{localize "rnk-illumination.ui.hub.range"}}">
         {{#each ../ranges}}
-        <option value="{{this}}" {{#if (eq this ../this.settings.range)}}selected{{/if}}>Range: {{this}}px</option>
+        <option value="{{this}}" {{#if (eq this ../this.settings.range)}}selected{{/if}}>{{localize "rnk-illumination.ui.hub.rangeLabel"}} {{this}}px</option>
         {{/each}}
       </select>
-      <select name="coGM_{{this.id}}_token" title="Assigned Token">
-        <option value="" {{#unless this.assignedToken}}selected{{/unless}}>Auto (Owned Token)</option>
+      <select name="coGM_{{this.id}}_token" title="{{localize "rnk-illumination.ui.hub.assignedToken"}}">
+        <option value="" {{#unless this.assignedToken}}selected{{/unless}}>{{localize "rnk-illumination.ui.hub.autoOwnedToken"}}</option>
         {{#each ../tokens}}
         <option value="{{this.id}}" {{#if (eq this.id ../this.assignedToken)}}selected{{/if}}>{{this.name}}</option>
         {{/each}}
@@ -106,54 +104,53 @@
 
   <!-- Other Users Section -->
   {{#if users.length}}
-  <div class="rnk-illumination-divider">RNK™ Authorized Users</div>
+  <div class="rnk-illumination-divider">{{localize "rnk-illumination.ui.hub.authorizedUsers"}}</div>
 
   <div class="rnk-illumination-grid">
     {{#each users}}
     <div class="rnk-illumination-player-card">
       <div class="rnk-illumination-avatar-container">
         <img class="rnk-illumination-avatar" src="{{this.avatar}}" alt="{{this.name}}" style="border-color: {{this.settings.color}}" onerror="this.src='icons/svg/mystery-man.svg'">
-        <button type="button" class="rnk-avatar-upload-btn" data-user="{{this.id}}" title="Upload Avatar">📷</button>
       </div>
       <span class="rnk-illumination-name">{{this.name}}</span>
-      <span class="rnk-illumination-role">{{#if this.isGM}}GM{{else}}{{#if this.isCoGM}}Co-GM{{else}}Player{{/if}}{{/if}}</span>
+        <span class="rnk-illumination-role">{{#if this.isGM}}{{localize "rnk-illumination.ui.roles.gmShort"}}{{else}}{{#if this.isCoGM}}{{localize "rnk-illumination.ui.roles.cogm"}}{{else}}{{localize "rnk-illumination.ui.roles.player"}}{{/if}}{{/if}}</span>
       <label class="rnk-illumination-cogm">
         <input type="checkbox" name="coGM_{{this.id}}" value="1" {{#if this.isCoGM}}checked{{/if}} {{#unless ../isCurrentUserGM}}disabled{{/unless}}>
-        Co-GM
+          {{localize "rnk-illumination.ui.roles.cogm"}}
       </label>
-      <select name="token_{{this.id}}" title="Assigned Token">
-        <option value="" {{#unless this.assignedToken}}selected{{/unless}}>Auto (Owned Token)</option>
+        <select name="token_{{this.id}}" title="{{localize "rnk-illumination.ui.hub.assignedToken"}}">
+          <option value="" {{#unless this.assignedToken}}selected{{/unless}}>{{localize "rnk-illumination.ui.hub.autoOwnedToken"}}</option>
         {{#each ../tokens}}
         <option value="{{this.id}}" {{#if (eq this.id ../this.assignedToken)}}selected{{/if}}>{{this.name}}</option>
         {{/each}}
       </select>
-      <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="Illumination Color">
-      <select name="{{this.id}}_effect" title="Effect Style">
+        <input type="color" name="{{this.id}}_color" value="{{this.settings.color}}" title="{{localize "rnk-illumination.ui.hub.color"}}">
+        <select name="{{this.id}}_effect" title="{{localize "rnk-illumination.ui.hub.effect"}}">
         {{#each ../effects}}
-        <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}None (Disabled){{else}}{{this}}{{/if}}</option>
+          <option value="{{this}}" {{#if (eq this ../this.settings.effect)}}selected{{/if}}>{{#if (eq this 'none')}}{{localize "rnk-illumination.ui.hub.effectDisabled"}}{{else}}{{this}}{{/if}}</option>
         {{/each}}
       </select>
-      <select name="{{this.id}}_symbol" title="Target Symbol">
+        <select name="{{this.id}}_symbol" title="{{localize "rnk-illumination.ui.hub.symbol"}}">
         {{#each ../symbols}}
         <option value="{{this}}" {{#if (eq this ../this.settings.symbol)}}selected{{/if}}>{{this}}</option>
         {{/each}}
       </select>
       <div class="rnk-illumination-custom">
-        <input type="text" name="{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="Image URL or path">
-        <button type="button" class="rnk-upload-btn" data-target="{{this.id}}_customSymbol">Upload</button>
+          <input type="text" name="{{this.id}}_customSymbol" value="{{this.settings.customSymbol}}" placeholder="{{localize "rnk-illumination.ui.hub.customSymbolPlaceholder"}}">
+          <button type="button" class="rnk-upload-btn" data-target="{{this.id}}_customSymbol">{{localize "rnk-illumination.ui.hub.upload"}}</button>
       </div>
-      <input type="number" name="{{this.id}}_intensity" value="{{this.settings.intensity}}" min="0.1" max="3.0" step="0.1" title="Effect Intensity">
-      <select name="{{this.id}}_range" title="Effect Range">
+        <input type="number" name="{{this.id}}_intensity" value="{{this.settings.intensity}}" min="0.1" max="3.0" step="0.1" title="{{localize "rnk-illumination.ui.hub.intensity"}}">
+        <select name="{{this.id}}_range" title="{{localize "rnk-illumination.ui.hub.range"}}">
         {{#each ../ranges}}
-        <option value="{{this}}" {{#if (eq this ../this.settings.range)}}selected{{/if}}>Range: {{this}}px</option>
+          <option value="{{this}}" {{#if (eq this ../this.settings.range)}}selected{{/if}}>{{localize "rnk-illumination.ui.hub.rangeLabel"}} {{this}}px</option>
         {{/each}}
       </select>
     </div>
     {{/each}}
   </div>
   {{else}}
-  <div class="rnk-illumination-empty">No other users connected</div>
+  <div class="rnk-illumination-empty">{{localize "rnk-illumination.ui.hub.noUsersConnected"}}</div>
   {{/if}}
 
-  <button type="submit" class="rnk-illumination-save">Save All Settings</button>
+  <button type="submit" class="rnk-illumination-save">{{localize "rnk-illumination.ui.hub.saveAll"}}</button>
 </div>

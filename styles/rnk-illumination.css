@@ -1,4 +1,4 @@
-/* RNK Illumination Styles */
+/* RNK™ Illumination Styles */
 /* All selectors scoped to module application IDs */
 
 /* ============================================
@@ -98,6 +98,30 @@
   height: 48px;
   border-radius: 50%;
   border: 3px solid #ccc;
+  object-fit: cover;
+  background: #ddd;
+}
+
+#rnk-gm-hub .rnk-illumination-avatar-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#rnk-gm-hub .rnk-illumination-gm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+#rnk-gm-hub .rnk-illumination-title {
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+#rnk-gm-hub .rnk-illumination-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.75;
 }
 
 /* RNK™ Control Button Styles */
@@ -108,9 +132,6 @@
 .module-control-btn i {
   color: #ff6400; /* Distinct RNK color */
   text-shadow: 0 0 5px rgba(255, 100, 0, 0.4);
-}
-  object-fit: cover;
-  background: #ddd;
 }
 
 /* Name */
@@ -217,6 +238,14 @@
 }
 .control-icon.rnk-origin-btn.active:hover {
   background: rgba(74,144,217,0.15);
+}
+
+.control-icon.rnk-assign-btn {
+  color: #ff6400;
+}
+
+.control-icon.rnk-assign-btn:hover {
+  background: rgba(255,100,0,0.15);
 }
 
 

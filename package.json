@@ -1,7 +1,7 @@
 {
   "name": "rnk-illumination",
-  "version": "2.5.7",
-  "description": "Advanced token illumination with custom underglow effects, GM configuration hub, and double-click targeting.",
+  "version": "2.5.10",
+  "description": "Advanced token illumination with custom underglow effects, administrator hub controls, and targeting line visuals.",
   "type": "module",
   "main": "scripts/rnk-illumination.js",
   "keywords": [
@@ -10,8 +10,8 @@
     "module",
     "v13"
   ],
-  "author": "RNK Enterprises",
-  "license": "MIT",
+  "author": "RNK™ Enterprises",
+  "license": "Proprietary",
   "repository": {
     "type": "git",
     "url": "https://github.com/RNK-Enterprise/rnk-illumination"

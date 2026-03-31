@@ -1,16 +1,17 @@
-# RNK Illumination
+# RNK™ Illumination
 
-An advanced Foundry VTT module providing custom underglow illumination effects for tokens with a GM hub for configuration.
+An advanced Foundry VTT module providing custom underglow illumination effects for owned, assigned, and targeted tokens with a GM and Co-GM hub for configuration.
 
-**Compatible with Foundry VTT v11, v12, and v13**
+**Compatible with Foundry VTT v13**
 
 ## Features
 
-- **GM Hub:** GM can configure settings and view/override all player settings
+- **GM and Co-GM Hub:** GM can configure all users; Co-GMs can open the hub and manage their own settings
 - **Heavy Underglow Effects:** Custom PIXI filters for stunning visual effects (glow, outline, shadow, neon)
-- **Automatic Application:** Illuminates controlled tokens and targets with radiating underglow
-- **Standard Targeting:** Right-click to target tokens (compatible across all Foundry versions)
+- **Automatic Application:** Illuminates owned or assigned tokens and targeted tokens with radiating underglow
+- **Standard Targeting:** Right-click to target tokens with optional hovered-token hotkey support
 - **Universal Visibility:** Effects are visible to all players for clear targeting indication
+- **Symbol Marker Lines:** Targeting distance markers use the selected symbol or uploaded image marker
 - **System Agnostic:** Works with any game system
 - **Language Support:** English (additional languages available upon request)
 
@@ -27,7 +28,7 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 
 1. Open Foundry VTT
 2. Navigate to **Add-on Modules**
-3. Search for **RNK Illumination**
+3. Search for **RNK™ Illumination**
 4. Click **Install**
 
 ### Manual Installation
@@ -36,6 +37,12 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 2. Extract to your `Data/modules/` directory
 3. Restart Foundry VTT
 4. Enable the module in your world
+
+### Manifest Installation
+
+Use this manifest URL in Foundry if you are installing directly from the release channel:
+
+`https://github.com/RNK-Enterprise/rnk-illumination/releases/latest/download/module.json`
 
 ## Usage
 
@@ -47,76 +54,60 @@ Look for the lightbulb icon in the scene controls toolbar and click it to open t
 
 Create a new macro in Foundry and paste this script:
 
-**Note:** Only the GM can open the Illumination Hub.
+**Note:** The GM or a designated Co-GM can open the Illumination Hub.
 
-**For GM:**
+**For GM or Co-GM:**
 ```javascript
-new RNKGMHub().render(true);
+openIlluminationHub();
 ```
 
 Assign a hotkey to the macro for quick access.
 
 ### Player Settings
 
-Players do not have a hub; illumination settings are controlled by the GM via the GM Hub.
+Players do not have a hub; illumination settings are controlled through the administrator hub.
 
-### For GM
+### For Administrators
 
 1. Open GM hub via scene control button or macro
-2. Configure your own settings
-3. View and modify settings for all players
-4. Control tokens or target to apply effects
+2. Configure your own settings and token assignment
+3. If you are the GM, view and modify settings for all players and Co-GMs
+4. If you are a Co-GM, manage your own settings from the same hub
+5. Control your assigned token or target tokens to apply effects
 
 ## Targeting
 
 - **Left-Click:** Control tokens
 - **Right-Click:** Target/untarget tokens (default Foundry behavior)
-- Effects automatically apply to controlled tokens and targets
+- **Shift+T:** Toggle targeting on the currently hovered token
+- Effects automatically apply to owned or assigned tokens and to active targets
 
 ## Notes
 
 - Effects use PIXI filters for custom underglow rendering
 - Settings are stored per user and persist across sessions
-- GM can override any player's settings
+- GM can override any player's settings and manage Co-GM access
 - Effects are applied client-side but visible to all players
+- Targeting lines use the active symbol selection for distance markers
 
 ---
 
 ## Release Notes
 
-### v2.3.0
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
-- Multiple Targeting Lines: Support for simultaneous targeting of multiple tokens
-- User Color Lines: Targeting lines now match each user's configured hub color
-- Symbol Markers: Distance markers display user's configured symbol/icon
-- Pulsating Targets: Targeted tokens now pulsate with their illumination effect
-- Enhanced Targeting: Improved targeting system with visual feedback
+## My Story
 
-### v2.2.0
-
-- Targeting Lines: Visual measurement lines between user tokens and targets
-- Selectable Origin for GMs: Crosshair button on NPC tokens to mark targeting source
-- Distance Markers: Automatic distance markers every 5 feet along targeting lines
-- Arrow Indicators: Directional arrows showing targeting direction
-- Canvas Integration: Lines render on canvas controls layer for proper visibility
-
-### v1.0.0
-
-- Initial release of RNK Illumination
-- Advanced token illumination with custom underglow effects
-- GM configuration hub with player management
-- 12 targeting symbols and 4 effect types
-- Full compatibility with Foundry VTT v11-13
-- System-agnostic design
+RNK™ Enterprises is built by The Curator, a retired truck driver, self-taught coder, and stroke survivor who builds Foundry VTT modules with a relentless focus on reliability, performance, and originality.
 
 ---
 
 ## License
 
-RNK Proprietary License - See [LICENSE](LICENSE) file for details
+RNK Proprietary License - See [LICENSE](LICENSE) for details
 
 ## Credits
 
-**Developed by:** Asgard Innovations  
+**Developed by:** RNK™ Enterprises  
 **Website:** [https://github.com/RNK-Enterprise](https://github.com/RNK-Enterprise)  
 **Support:** [https://patreon.com/RagNaroks](https://patreon.com/RagNaroks)
