@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Pending v14 Alignment
+## [2.5.12] - 2026-04-15
+
+### Release Alignment
 - Updated compatibility to Foundry VTT v13-14.
 - Switched manifest URL to the GitHub release latest download endpoint.
 - Removed stale packaged zips and prepared for version bump.
