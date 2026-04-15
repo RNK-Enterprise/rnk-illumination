@@ -2,7 +2,7 @@
 
 An advanced Foundry VTT module providing custom underglow illumination effects for owned, assigned, and targeted tokens with a GM and Co-GM hub for configuration.
 
-**Compatible with Foundry VTT v13**
+**Compatible with Foundry VTT v13-14 (minimum: 13, verified: 14)**
 
 ## Features
 
@@ -40,7 +40,7 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 
 ### Manifest Installation
 
-Use this manifest URL in Foundry if you are installing directly from the release channel:
+Use this manifest URL in Foundry if you are installing directly:
 
 `https://github.com/RNK-Enterprise/rnk-illumination/releases/latest/download/module.json`
 

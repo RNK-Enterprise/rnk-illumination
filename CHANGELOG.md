@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Pending v14 Alignment
+- Updated compatibility to Foundry VTT v13-14.
+- Switched manifest URL to the GitHub release latest download endpoint.
+- Removed stale packaged zips and prepared for version bump.
+
 ## [2.5.10] - 2026-03-31
 ### Changed
 - Bumped the release metadata for the free-module publish.
