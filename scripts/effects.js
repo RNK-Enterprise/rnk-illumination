@@ -69,14 +69,28 @@ export function createFallbackFilter(color, strength = 1) {
 }
 
 /**
+ * Return the display object that can receive a PIXI filter for a placeable.
+ * Tokens, tiles, and many scene objects expose one of these fields.
+ * @param {object} placeable
+ * @returns {PIXI.DisplayObject|null}
+ */
+function getEffectSprite(placeable) {
+  if (!placeable) return null;
+  if (placeable.mesh) return placeable.mesh;
+  if (placeable.icon) return placeable.icon;
+  if (placeable.shape) return placeable.shape;
+  return placeable;
+}
+
+/**
  * Apply illumination effect to a token
- * @param {Token} token - The token to apply effect to
+ * @param {object} token - The token or placeable to apply effect to
  * @param {Object} settings - Settings with color and effect type
  * @param {boolean} [shouldPulsate=null] - Whether the effect should pulsate
  */
 export function applyEffect(token, settings, shouldPulsate = null) {
   if (!token) return;
-  const sprite = token.mesh || token.icon;
+  const sprite = getEffectSprite(token);
   if (!sprite) return;
 
   // If effect is 'none', don't apply any effect
@@ -161,7 +175,7 @@ export function applyEffect(token, settings, shouldPulsate = null) {
     existingFilters.push(filter);
     sprite.filters = existingFilters;
 
-    // Apply pulsation if token is targeted
+    // Apply pulsation if the placeable is targeted or otherwise requested
     if (pulsate) {
       startPulsatingAnimation(filter, settings.effect);
     } else {
@@ -174,11 +188,11 @@ export function applyEffect(token, settings, shouldPulsate = null) {
 
 /**
  * Remove illumination effect from a token
- * @param {Token} token - The token to remove effect from
+ * @param {object} token - The token or placeable to remove effect from
  */
 export function removeEffect(token) {
   if (!token) return;
-  const sprite = token.mesh || token.icon;
+  const sprite = getEffectSprite(token);
   if (!sprite || !sprite.filters) return;
 
   try {

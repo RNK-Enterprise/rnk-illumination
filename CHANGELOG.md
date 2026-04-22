@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.13] - 2026-04-22
+
+### Added
+- GM hub object browser with search and layer filtering for custom-illuminated tiles, drawings, walls, and ambient lights.
+- Per-object illumination dialogs and hub actions for editing or clearing scene object settings.
+
+### Changed
+- Added a GM hub toggle to disable targeting visuals while preserving token glow.
+- Expanded the shared illumination effect pipeline to support non-token placeables.
+- Updated the release notes and documentation for the new illumination workflow.
+
 ## [2.5.12] - 2026-04-15
 
 ### Release Alignment

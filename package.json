@@ -1,6 +1,6 @@
 {
   "name": "rnk-illumination",
-  "version": "2.5.12",
+  "version": "2.5.13",
   "description": "Advanced token illumination with custom underglow effects, administrator hub controls, and targeting line visuals.",
   "type": "module",
   "main": "scripts/rnk-illumination.js",

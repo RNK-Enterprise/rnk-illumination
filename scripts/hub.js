@@ -2,9 +2,17 @@
  * RNK™ Illumination - Hub Interface
  */
 
-import { AVAILABLE_EFFECTS, AVAILABLE_RANGES, AVAILABLE_SYMBOLS, DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
+import {
+  AVAILABLE_EFFECTS,
+  AVAILABLE_RANGES,
+  AVAILABLE_SYMBOLS,
+  DEFAULT_SETTINGS,
+  DEFAULT_TARGETING_ENABLED,
+  MODULE_ID
+} from './constants.js';
 import { sanitizeColor } from './effects.js';
 import { isValidSymbol, sanitizeSymbol } from './targeting.js';
+import { clearTargetingLines, drawTargetingLine } from './targeting-lines.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -37,6 +45,70 @@ async function syncAssignedToken(user, nextTokenId) {
 function isCoGM(user) {
   if (!user) return false;
   return user.isGM || Boolean(user.getFlag && user.getFlag(MODULE_ID, 'coGM'));
+}
+
+function getUserTargetingSettings(user) {
+  const raw = user?.getFlag?.(MODULE_ID, 'settings') || {};
+  const customSymbol = typeof raw.customSymbol === 'string' ? raw.customSymbol.trim() : '';
+  return {
+    color: sanitizeColor(raw.color || DEFAULT_SETTINGS.color),
+    symbol: sanitizeSymbol(customSymbol || raw.symbol || DEFAULT_SETTINGS.symbol)
+  };
+}
+
+function getPlaceableSettings(placeable) {
+  const raw = placeable?.document?.getFlag?.(MODULE_ID, 'illuminationSettings') ||
+    placeable?.getFlag?.(MODULE_ID, 'illuminationSettings');
+  if (!raw) return null;
+
+  const customSymbol = typeof raw.customSymbol === 'string' ? raw.customSymbol.trim() : '';
+  return {
+    color: sanitizeColor(raw.color || DEFAULT_SETTINGS.color),
+    effect: AVAILABLE_EFFECTS.includes(raw.effect) ? raw.effect : DEFAULT_SETTINGS.effect,
+    symbol: sanitizeSymbol(customSymbol || raw.symbol || DEFAULT_SETTINGS.symbol),
+    customSymbol,
+    intensity: Number.parseFloat(raw.intensity) || DEFAULT_SETTINGS.intensity,
+    range: Number.parseInt(raw.range, 10) || DEFAULT_SETTINGS.range
+  };
+}
+
+function getObjectLayerLabel(layerKey) {
+  switch (layerKey) {
+    case 'tiles': return 'Tile';
+    case 'drawings': return 'Drawing';
+    case 'walls': return 'Wall';
+    case 'lighting': return 'Ambient Light';
+    default: return 'Object';
+  }
+}
+
+function getConfiguredObjects() {
+  const layers = [
+    ['tiles', canvas?.tiles?.placeables],
+    ['drawings', canvas?.drawings?.placeables],
+    ['walls', canvas?.walls?.placeables],
+    ['lighting', canvas?.lighting?.placeables]
+  ];
+
+  return layers.flatMap(([layerKey, placeables]) => {
+    if (!Array.isArray(placeables)) return [];
+    return placeables.map(placeable => {
+      const settings = getPlaceableSettings(placeable);
+      if (!settings) return null;
+      return {
+        id: placeable.id,
+        layerKey,
+        layerLabel: getObjectLayerLabel(layerKey),
+        name: placeable.name || placeable.document?.name || placeable.document?.documentName || placeable.id,
+        settings,
+        color: settings.color,
+        effect: settings.effect,
+        symbol: settings.symbol,
+        intensity: settings.intensity,
+        range: settings.range
+      };
+    }).filter(Boolean);
+  });
 }
 
 /**
@@ -92,6 +164,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         gmUsers: [],
         users: [],
         gmSettings: { ...DEFAULT_SETTINGS },
+        targetingEnabled: DEFAULT_TARGETING_ENABLED,
+        configuredObjects: [],
         effects: AVAILABLE_EFFECTS,
         symbols: AVAILABLE_SYMBOLS,
         ranges: AVAILABLE_RANGES
@@ -169,6 +243,7 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
     const gmUser = game.user;
     const gmSettings = gmUser.getFlag(MODULE_ID, 'settings') || { ...DEFAULT_SETTINGS };
     const gmAssignedToken = gmUser.getFlag(MODULE_ID, 'assignedTokenId') || '';
+    const configuredObjects = getConfiguredObjects();
 
     return {
       gm: {
@@ -180,6 +255,8 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         isCoGM: !gmUser.isGM && this._isCoGM(gmUser),
         assignedToken: gmAssignedToken
       },
+      targetingEnabled: game.settings.get(MODULE_ID, 'targetingEnabled') ?? DEFAULT_TARGETING_ENABLED,
+      configuredObjects,
       gmUsers: gmUsers,
       coGMUsers: coGMUsers,
       users: users,
@@ -201,6 +278,9 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender?.(context, options);
+    const app = this;
+    const objectFilterState = this._objectBrowserState ?? { query: '', layer: 'all' };
+    this._objectBrowserState = objectFilterState;
     
     const btns = this.element.querySelectorAll('.rnk-upload-btn');
     btns.forEach(btn => {
@@ -230,6 +310,82 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       });
     });
+
+    const resolvePlaceable = (layerKey, objectId) => canvas?.[layerKey]?.get?.(objectId) ||
+      canvas?.[layerKey]?.placeables?.find(placeable => placeable.id === objectId) ||
+      null;
+
+    this.element.querySelectorAll('[data-rnk-illumination-object-edit]').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const layerKey = btn.dataset.layer;
+        const objectId = btn.dataset.objectId;
+        const placeable = resolvePlaceable(layerKey, objectId);
+        if (!placeable) {
+          ui.notifications.warn(localize('rnk-illumination.notifications.objectNotFound'));
+          return;
+        }
+        if (typeof globalThis.openIlluminationObjectDialog === 'function') {
+          globalThis.openIlluminationObjectDialog(placeable, () => app.render({ force: true }));
+        }
+      });
+    });
+
+    this.element.querySelectorAll('[data-rnk-illumination-object-clear]').forEach(btn => {
+      btn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const layerKey = btn.dataset.layer;
+        const objectId = btn.dataset.objectId;
+        const placeable = resolvePlaceable(layerKey, objectId);
+        if (!placeable?.document?.unsetFlag) return;
+        await placeable.document.unsetFlag(MODULE_ID, 'illuminationSettings');
+        if (typeof globalThis.refreshAllPlaceableIllumination === 'function') {
+          globalThis.refreshAllPlaceableIllumination();
+        }
+        app.render({ force: true });
+      });
+    });
+
+    const searchInput = this.element.querySelector('.rnk-illumination-object-search');
+    const layerFilter = this.element.querySelector('.rnk-illumination-object-layer-filter');
+    const objectCards = Array.from(this.element.querySelectorAll('.rnk-object-card'));
+    const countLabel = this.element.querySelector('.rnk-illumination-toolbar-count');
+
+    if (searchInput) searchInput.value = objectFilterState.query;
+    if (layerFilter) layerFilter.value = objectFilterState.layer;
+
+    const applyObjectFilters = () => {
+      const query = (searchInput?.value || '').trim().toLowerCase();
+      const layer = layerFilter?.value || 'all';
+      objectFilterState.query = query;
+      objectFilterState.layer = layer;
+
+      let visibleCount = 0;
+      objectCards.forEach(card => {
+        const name = (card.dataset.objectName || '').toLowerCase();
+        const cardLayer = card.dataset.objectLayer || '';
+        const effect = (card.dataset.objectEffect || '').toLowerCase();
+        const matchesQuery = !query || name.includes(query) || effect.includes(query) || cardLayer.includes(query);
+        const matchesLayer = layer === 'all' || cardLayer === layer;
+        const visible = matchesQuery && matchesLayer;
+        card.style.display = visible ? '' : 'none';
+        if (visible) visibleCount++;
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `${visibleCount} ${game.i18n.localize('rnk-illumination.ui.hub.objectCount')}`;
+      }
+    };
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyObjectFilters);
+    }
+    if (layerFilter) {
+      layerFilter.addEventListener('change', applyObjectFilters);
+    }
+    applyObjectFilters();
   }
 
   static async _onSubmit(event, form, formData) {
@@ -283,6 +439,18 @@ export class RNKGMHub extends HandlebarsApplicationMixin(ApplicationV2) {
       await game.user.setFlag(MODULE_ID, 'settings', gmSettings);
       const gmAssignedToken = data.gmToken || null;
       await syncAssignedToken(game.user, gmAssignedToken);
+      const targetingEnabled = Boolean(data.targetingEnabled);
+      await game.settings.set(MODULE_ID, 'targetingEnabled', targetingEnabled);
+
+      clearTargetingLines();
+      if (targetingEnabled) {
+        game.users.forEach(user => {
+          user.targets.forEach(target => {
+            const settings = getUserTargetingSettings(user);
+            drawTargetingLine(user, target, settings.color, settings.symbol);
+          });
+        });
+      }
 
       // Save Co-GM settings from their dedicated control rows
       const coGMUserObjs = game.users.filter(u => u.id !== game.user.id && isCoGM(u));

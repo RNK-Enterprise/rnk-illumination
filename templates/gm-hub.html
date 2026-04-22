@@ -30,6 +30,10 @@
         <span class="rnk-illumination-name">{{gm.name}}</span>
         <span class="rnk-illumination-role">{{#if gm.isGM}}{{localize "rnk-illumination.ui.roles.gm"}}{{else}}{{localize "rnk-illumination.ui.roles.cogm"}}{{/if}}</span>
       </div>
+      <label class="rnk-illumination-toggle">
+        <input type="checkbox" name="targetingEnabled" {{checked targetingEnabled}}>
+        {{localize "rnk-illumination.ui.hub.targetingEnabled"}}
+      </label>
       <input type="color" name="gmColor" value="{{gmSettings.color}}" title="{{localize "rnk-illumination.ui.hub.color"}}">
       <select name="gmEffect" title="{{localize "rnk-illumination.ui.hub.effect"}}">
         {{#each effects}}
@@ -59,6 +63,45 @@
       </select>
     </div>
   </div>
+
+  {{#if configuredObjects.length}}
+  <div class="rnk-illumination-divider">{{localize "rnk-illumination.ui.hub.configuredObjects"}}</div>
+  <div class="rnk-illumination-toolbar">
+    <input type="search" class="rnk-illumination-object-search" placeholder="{{localize "rnk-illumination.ui.hub.searchObjects"}}">
+    <select class="rnk-illumination-object-layer-filter">
+      <option value="all">{{localize "rnk-illumination.ui.hub.filterAllObjects"}}</option>
+      <option value="tiles">{{localize "rnk-illumination.ui.hub.filterTiles"}}</option>
+      <option value="drawings">{{localize "rnk-illumination.ui.hub.filterDrawings"}}</option>
+      <option value="walls">{{localize "rnk-illumination.ui.hub.filterWalls"}}</option>
+      <option value="lighting">{{localize "rnk-illumination.ui.hub.filterLights"}}</option>
+    </select>
+    <span class="rnk-illumination-toolbar-count">{{configuredObjects.length}} {{localize "rnk-illumination.ui.hub.objectCount"}}</span>
+  </div>
+  <div class="rnk-illumination-grid">
+    {{#each configuredObjects}}
+    <div class="rnk-illumination-player-card rnk-object-card" data-object-layer="{{this.layerKey}}" data-object-name="{{this.name}}" data-object-effect="{{this.effect}}">
+      <div class="rnk-illumination-object-head">
+        <div class="rnk-illumination-gm-info">
+          <span class="rnk-illumination-name">{{this.name}}</span>
+          <span class="rnk-illumination-role">{{this.layerLabel}}</span>
+        </div>
+        <span class="rnk-illumination-object-badge">{{this.effect}}</span>
+      </div>
+      <div class="rnk-illumination-object-stats">
+        <span><strong>{{localize "rnk-illumination.ui.hub.color"}}:</strong> {{this.color}}</span>
+        <span><strong>{{localize "rnk-illumination.ui.hub.symbol"}}:</strong> {{this.symbol}}</span>
+        <span><strong>{{localize "rnk-illumination.ui.hub.rangeLabel"}}:</strong> {{this.range}}px</span>
+      </div>
+      <div class="rnk-illumination-object-actions">
+        <button type="button" class="rnk-object-action-btn" data-rnk-illumination-object-edit="true" data-layer="{{this.layerKey}}" data-object-id="{{this.id}}">{{localize "rnk-illumination.ui.hub.editObject"}}</button>
+        <button type="button" class="rnk-object-action-btn" data-rnk-illumination-object-clear="true" data-layer="{{this.layerKey}}" data-object-id="{{this.id}}">{{localize "rnk-illumination.ui.hub.clearObject"}}</button>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{else}}
+  <div class="rnk-illumination-empty">{{localize "rnk-illumination.ui.hub.noConfiguredObjects"}}</div>
+  {{/if}}
 
   <!-- Co-GM Controls (separate from GM) -->
   {{#each coGMUsers}}

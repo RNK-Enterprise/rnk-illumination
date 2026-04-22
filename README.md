@@ -9,9 +9,12 @@ An advanced Foundry VTT module providing custom underglow illumination effects f
 - **GM and Co-GM Hub:** GM can configure all users; Co-GMs can open the hub and manage their own settings
 - **Heavy Underglow Effects:** Custom PIXI filters for stunning visual effects (glow, outline, shadow, neon)
 - **Automatic Application:** Illuminates owned or assigned tokens and targeted tokens with radiating underglow
+- **Targeting Toggle:** Optionally hide targeting lines and target markers while keeping token glow active
 - **Standard Targeting:** Right-click to target tokens with optional hovered-token hotkey support
 - **Universal Visibility:** Effects are visible to all players for clear targeting indication
 - **Symbol Marker Lines:** Targeting distance markers use the selected symbol or uploaded image marker
+- **Object Illumination:** Configure individual tiles, drawings, walls, and ambient lights with their own effect settings
+- **Hub Object Browser:** Review and edit all custom-illuminated scene objects from the GM hub
 - **System Agnostic:** Works with any game system
 - **Language Support:** English (additional languages available upon request)
 
@@ -81,6 +84,17 @@ Players do not have a hub; illumination settings are controlled through the admi
 - **Right-Click:** Target/untarget tokens (default Foundry behavior)
 - **Shift+T:** Toggle targeting on the currently hovered token
 - Effects automatically apply to owned or assigned tokens and to active targets
+- GM/Co-GM can disable targeting visuals from the hub without turning off glow effects
+
+## Object Illumination
+
+- Open a tile, drawing, wall, or ambient light config and use the illumination button to assign that object its own settings
+- Object settings are stored per scene object, so each supported object can keep a unique effect, color, symbol, intensity, and range
+
+## Hub Object Browser
+
+- The GM hub lists every scene object that has custom illumination
+- Use the edit button to reopen an object’s settings or clear to remove that object’s custom illumination
 
 ## Notes
 
@@ -94,7 +108,9 @@ Players do not have a hub; illumination settings are controlled through the admi
 
 ## Release Notes
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+Current release: `2.5.13`
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history and release details.
 
 ## My Story
 

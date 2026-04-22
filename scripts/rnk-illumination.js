@@ -3,7 +3,14 @@
  * Advanced token illumination with custom underglow effects and hubs.
  */
 
-import { DEFAULT_SETTINGS, MODULE_ID } from './constants.js';
+import {
+  AVAILABLE_EFFECTS,
+  AVAILABLE_RANGES,
+  AVAILABLE_SYMBOLS,
+  DEFAULT_SETTINGS,
+  DEFAULT_TARGETING_ENABLED,
+  MODULE_ID
+} from './constants.js';
 import { clearTargetingIndicators, hideTargetingIndicator, showTargetingIndicator } from './targeting.js';
 import { applyEffect, removeEffect, sanitizeColor } from './effects.js';
 import { openIlluminationHub, RNKGMHub } from './hub.js';
@@ -15,9 +22,24 @@ import {
   removeTargetingLine,
   updateTokenTargetingLines
 } from './targeting-lines.js';
+import { sanitizeSymbol } from './targeting.js';
 
 // Debounce timer for refresh all
 let _refreshAllTimeout = null;
+const PLACEABLE_SETTINGS_FLAG = 'illuminationSettings';
+
+function normalizeEffectSettings(raw = {}) {
+  const customSymbol = typeof raw.customSymbol === 'string' ? raw.customSymbol.trim() : '';
+  const symbolSource = customSymbol || raw.symbol || DEFAULT_SETTINGS.symbol;
+  return {
+    color: sanitizeColor(raw.color || DEFAULT_SETTINGS.color),
+    effect: AVAILABLE_EFFECTS.includes(raw.effect) ? raw.effect : DEFAULT_SETTINGS.effect,
+    symbol: sanitizeSymbol(symbolSource),
+    customSymbol,
+    intensity: Number.parseFloat(raw.intensity) || DEFAULT_SETTINGS.intensity,
+    range: Number.parseInt(raw.range, 10) || DEFAULT_SETTINGS.range
+  };
+}
 
 /**
  * Get user illumination settings with fallback to defaults
@@ -27,13 +49,229 @@ let _refreshAllTimeout = null;
 function getUserSettings(userId) {
   const user = game.users?.get(userId);
   const raw = user ? (user.getFlag(MODULE_ID, 'settings') || {}) : {};
-  return {
-    color: sanitizeColor(raw.color || DEFAULT_SETTINGS.color),
-    effect: raw.effect || DEFAULT_SETTINGS.effect,
-    symbol: raw.symbol || DEFAULT_SETTINGS.symbol,
-    intensity: raw.intensity || DEFAULT_SETTINGS.intensity,
-    range: raw.range || DEFAULT_SETTINGS.range
-  };
+  return normalizeEffectSettings(raw);
+}
+
+function getTargetingVisualsEnabled() {
+  return game.settings.get(MODULE_ID, 'targetingEnabled') ?? DEFAULT_TARGETING_ENABLED;
+}
+
+function getPlaceableSettings(placeable) {
+  if (!placeable) return null;
+  const raw = placeable.document?.getFlag?.(MODULE_ID, PLACEABLE_SETTINGS_FLAG) ||
+    placeable.getFlag?.(MODULE_ID, PLACEABLE_SETTINGS_FLAG);
+  if (!raw) return null;
+  return normalizeEffectSettings(raw);
+}
+
+async function setPlaceableSettings(placeable, settings) {
+  const document = placeable?.document ?? placeable;
+  if (!document?.setFlag) return;
+  await document.setFlag(MODULE_ID, PLACEABLE_SETTINGS_FLAG, settings);
+}
+
+async function clearPlaceableSettings(placeable) {
+  const document = placeable?.document ?? placeable;
+  if (!document?.unsetFlag) return;
+  await document.unsetFlag(MODULE_ID, PLACEABLE_SETTINGS_FLAG);
+}
+
+function refreshPlaceableIllumination(placeable) {
+  if (!placeable) return;
+  const settings = getPlaceableSettings(placeable);
+  if (settings) {
+    applyEffect(placeable, settings, false);
+  } else {
+    removeEffect(placeable);
+  }
+}
+
+function refreshAllPlaceableIllumination() {
+  const placeableGroups = [
+    canvas?.tiles?.placeables,
+    canvas?.drawings?.placeables,
+    canvas?.walls?.placeables,
+    canvas?.lighting?.placeables
+  ];
+
+  placeableGroups.forEach(group => {
+    group?.forEach(placeable => {
+      try {
+        refreshPlaceableIllumination(placeable);
+      } catch (err) {}
+    });
+  });
+}
+
+function getPlaceableLabel(placeable) {
+  const rawName = placeable?.document?.documentName || placeable?.documentName || placeable?.constructor?.name || 'Object';
+  return rawName.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+function buildPlaceableSettingsDialogContent(placeable, settings) {
+  const current = settings ?? normalizeEffectSettings();
+  const customSymbol = escapeHtml(current.customSymbol || '');
+  const effectOptions = AVAILABLE_EFFECTS.map(effect => {
+    const selected = effect === current.effect ? 'selected' : '';
+    const label = effect === 'none' ? 'None (Disabled)' : effect;
+    return `<option value="${effect}" ${selected}>${label}</option>`;
+  }).join('');
+  const symbolOptions = AVAILABLE_SYMBOLS.map(symbol => {
+    const selected = symbol === current.symbol ? 'selected' : '';
+    return `<option value="${symbol}" ${selected}>${symbol}</option>`;
+  }).join('');
+
+  return `
+    <form class="rnk-illumination-placeable-form">
+      <div class="form-group">
+        <label>Color</label>
+        <input type="color" name="color" value="${escapeHtml(current.color)}">
+      </div>
+      <div class="form-group">
+        <label>Effect</label>
+        <select name="effect">${effectOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Symbol</label>
+        <select name="symbol">${symbolOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Custom Symbol</label>
+        <input type="text" name="customSymbol" value="${customSymbol}" placeholder="Image URL or path">
+      </div>
+      <div class="form-group">
+        <label>Intensity</label>
+        <input type="number" name="intensity" min="0.1" max="3.0" step="0.1" value="${escapeHtml(current.intensity)}">
+      </div>
+      <div class="form-group">
+        <label>Range</label>
+        <select name="range">
+          ${AVAILABLE_RANGES.map(range => {
+            const selected = Number(range) === Number(current.range) ? 'selected' : '';
+            return `<option value="${range}" ${selected}>${range}px</option>`;
+          }).join('')}
+        </select>
+      </div>
+    </form>
+  `;
+}
+
+function getDialogRoot(html) {
+  return html instanceof HTMLElement ? html : (html?.[0] ?? html?.element ?? html);
+}
+
+function escapeHtml(value) {
+  if (foundry.utils?.escapeHTML) return foundry.utils.escapeHTML(String(value ?? ''));
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function appendIlluminationButton(html, onClick, titleKey = 'rnk-illumination.ui.object.configure', iconClass = 'fa-sparkles') {
+  const root = html instanceof HTMLElement ? html : (html[0] ?? html);
+  if (!root || root.querySelector?.('[data-rnk-illumination-btn="true"]')) return;
+
+  const btn = document.createElement('a');
+  btn.classList.add('control-icon', 'rnk-illumination-object-btn');
+  btn.dataset.rnkIlluminationBtn = 'true';
+  btn.title = game.i18n.localize(titleKey);
+  btn.innerHTML = `<i class="fas ${iconClass}"></i>`;
+  btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    onClick();
+  });
+
+  const selectors = ['.col.right', '.col.left', '.col', '.controls', 'form'];
+  let inserted = false;
+  for (const sel of selectors) {
+    const container = root.querySelector(sel);
+    if (container) {
+      container.appendChild(btn);
+      inserted = true;
+      break;
+    }
+  }
+  if (!inserted) {
+    root.appendChild(btn);
+  }
+}
+
+async function openPlaceableSettingsDialog(placeable, onDone = null) {
+  const currentSettings = getPlaceableSettings(placeable) ?? normalizeEffectSettings();
+
+  new Dialog({
+    title: `${getPlaceableLabel(placeable)} ${game.i18n.localize('rnk-illumination.ui.object.dialogTitle')}`,
+    content: buildPlaceableSettingsDialogContent(placeable, currentSettings),
+    buttons: {
+      save: {
+        icon: '<i class="fas fa-check"></i>',
+        label: game.i18n.localize('rnk-illumination.ui.tile.save'),
+        callback: async (html) => {
+          const root = getDialogRoot(html);
+          if (!root) return;
+
+          const color = root.querySelector('[name="color"]')?.value?.trim() || DEFAULT_SETTINGS.color;
+          const effect = root.querySelector('[name="effect"]')?.value?.trim() || DEFAULT_SETTINGS.effect;
+          const symbol = root.querySelector('[name="symbol"]')?.value?.trim() || DEFAULT_SETTINGS.symbol;
+          const customSymbol = root.querySelector('[name="customSymbol"]')?.value?.trim() || '';
+          const intensity = Number.parseFloat(root.querySelector('[name="intensity"]')?.value) || DEFAULT_SETTINGS.intensity;
+          const range = Number.parseInt(root.querySelector('[name="range"]')?.value, 10) || DEFAULT_SETTINGS.range;
+
+          if (!/^#[0-9A-F]{6}$/i.test(color)) {
+            ui.notifications.error('Invalid color format.');
+            return;
+          }
+          if (!AVAILABLE_EFFECTS.includes(effect)) {
+            ui.notifications.error('Invalid effect selection.');
+            return;
+          }
+          if (!AVAILABLE_SYMBOLS.includes(symbol) && !customSymbol) {
+            ui.notifications.error('Invalid symbol selection.');
+            return;
+          }
+          if (intensity < 0.1 || intensity > 3.0) {
+            ui.notifications.error('Intensity must be between 0.1 and 3.0.');
+            return;
+          }
+          if (!AVAILABLE_RANGES.includes(range)) {
+            ui.notifications.error('Invalid range selection.');
+            return;
+          }
+
+          const settings = {
+            color,
+            effect,
+            symbol: sanitizeSymbol(customSymbol || symbol),
+            customSymbol,
+            intensity,
+            range
+          };
+
+          await setPlaceableSettings(placeable, settings);
+          refreshPlaceableIllumination(placeable);
+          if (typeof onDone === 'function') onDone();
+        }
+      },
+      clear: {
+        icon: '<i class="fas fa-trash"></i>',
+        label: game.i18n.localize('rnk-illumination.ui.tile.clear'),
+        callback: async () => {
+          await clearPlaceableSettings(placeable);
+          removeEffect(placeable);
+          if (typeof onDone === 'function') onDone();
+        }
+      },
+      cancel: {
+        icon: '<i class="fas fa-times"></i>',
+        label: game.i18n.localize('rnk-illumination.ui.tile.cancel')
+      }
+    },
+    default: 'save'
+  }).render(true);
 }
 
 // -----------------------------------------------------------------------------
@@ -205,12 +443,17 @@ export function refreshTokenIllumination(token) {
   const targetingUser = getTargetingUser(token);
   const tokenOwner = getTokenOwner(token);
   const isOwnerTargeting = tokenOwner && isUserTargeting(tokenOwner);
+  const targetingVisualsEnabled = getTargetingVisualsEnabled();
 
   if (targetingUser || isOwnerTargeting) {
     const activeUser = targetingUser || tokenOwner;
     const settings = getUserSettings(activeUser.id);
     applyEffect(token, settings);
-    showTargetingIndicator(token, settings.color, settings.symbol);
+    if (targetingVisualsEnabled) {
+      showTargetingIndicator(token, settings.color, settings.symbol);
+    } else {
+      hideTargetingIndicator(token);
+    }
   } else {
     hideTargetingIndicator(token);
     if (tokenOwner) {
@@ -262,6 +505,15 @@ Hooks.on('ready', () => {
     type: String
   });
 
+  game.settings.register(MODULE_ID, 'targetingEnabled', {
+    name: 'rnk-illumination.settings.targetingEnabled.name',
+    hint: 'rnk-illumination.settings.targetingEnabled.hint',
+    scope: 'world',
+    config: false,
+    default: DEFAULT_TARGETING_ENABLED,
+    type: Boolean
+  });
+
   if (game.user?.isGM) {
     game.settings.registerMenu(MODULE_ID, 'gmHub', {
       name: 'rnk-illumination.ui.hub.title',
@@ -273,11 +525,22 @@ Hooks.on('ready', () => {
     });
   }
   if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
+  if (canvas?.tiles?.placeables) refreshAllPlaceableIllumination();
 });
 
 Hooks.on('canvasReady', () => {
   clearTargetingIndicators();
+  clearTargetingLines();
+  if (getTargetingVisualsEnabled()) {
+    game.users.forEach(u => {
+      u.targets.forEach(t => {
+        const settings = getUserSettings(u.id);
+        drawTargetingLine(u, t, settings.color, settings.symbol);
+      });
+    });
+  }
   refreshAllTokenIllumination();
+  refreshAllPlaceableIllumination();
 });
 
 Hooks.on('targetToken', (user, token, isTargeted) => {
@@ -292,7 +555,7 @@ Hooks.on('targetToken', (user, token, isTargeted) => {
         if (userToken.id === token.id) return;
 
         const settings = getUserSettings(user.id);
-        if (isTargeted) {
+        if (isTargeted && getTargetingVisualsEnabled()) {
           // Clear any old lines before drawing new one
           removeTargetingLine(user, token);
           drawTargetingLine(user, token, settings.color, settings.symbol);
@@ -306,6 +569,22 @@ Hooks.on('targetToken', (user, token, isTargeted) => {
 
 Hooks.on('createToken', (tokenDoc) => {
   if (tokenDoc.object) refreshTokenIllumination(tokenDoc.object);
+});
+
+Hooks.on('createTile', (tileDoc) => {
+  if (tileDoc.object) refreshPlaceableIllumination(tileDoc.object);
+});
+
+Hooks.on('createDrawing', (drawingDoc) => {
+  if (drawingDoc.object) refreshPlaceableIllumination(drawingDoc.object);
+});
+
+Hooks.on('createWall', (wallDoc) => {
+  if (wallDoc.object) refreshPlaceableIllumination(wallDoc.object);
+});
+
+Hooks.on('createAmbientLight', (lightDoc) => {
+  if (lightDoc.object) refreshPlaceableIllumination(lightDoc.object);
 });
 
 Hooks.on('updateToken', (tokenDoc, changes) => {
@@ -330,6 +609,26 @@ Hooks.on('updateToken', (tokenDoc, changes) => {
   }
 });
 
+Hooks.on('updateTile', (tileDoc) => {
+  const tile = canvas?.tiles?.get(tileDoc.id) || tileDoc.object;
+  if (tile) refreshPlaceableIllumination(tile);
+});
+
+Hooks.on('updateDrawing', (drawingDoc) => {
+  const drawing = canvas?.drawings?.get(drawingDoc.id) || drawingDoc.object;
+  if (drawing) refreshPlaceableIllumination(drawing);
+});
+
+Hooks.on('updateWall', (wallDoc) => {
+  const wall = canvas?.walls?.get(wallDoc.id) || wallDoc.object;
+  if (wall) refreshPlaceableIllumination(wall);
+});
+
+Hooks.on('updateAmbientLight', (lightDoc) => {
+  const light = canvas?.lighting?.get(lightDoc.id) || lightDoc.object;
+  if (light) refreshPlaceableIllumination(light);
+});
+
 // When a token drag starts, clear its lines so they don't stick at old positions.
 // Lines are redrawn in the updateToken hook after animation completes.
 Hooks.on('preUpdateToken', (tokenDoc, changes) => {
@@ -343,6 +642,22 @@ Hooks.on('refreshToken', (token) => {
   refreshTokenIllumination(token);
 });
 
+Hooks.on('refreshTile', (tile) => {
+  refreshPlaceableIllumination(tile);
+});
+
+Hooks.on('refreshDrawing', (drawing) => {
+  refreshPlaceableIllumination(drawing);
+});
+
+Hooks.on('refreshWall', (wall) => {
+  refreshPlaceableIllumination(wall);
+});
+
+Hooks.on('refreshAmbientLight', (light) => {
+  refreshPlaceableIllumination(light);
+});
+
 Hooks.on('deleteToken', (tokenDoc) => {
   if (tokenDoc.object) {
     removeEffect(tokenDoc.object);
@@ -354,6 +669,34 @@ Hooks.on('deleteToken', (tokenDoc) => {
   const originId = getGMOriginTokenId();
   if (originId && tokenDoc.id === originId) {
     clearGMOriginToken();
+  }
+});
+
+Hooks.on('deleteTile', (tileDoc) => {
+  if (tileDoc.object) {
+    removeEffect(tileDoc.object);
+    clearPlaceableSettings(tileDoc.object).catch(() => {});
+  }
+});
+
+Hooks.on('deleteDrawing', (drawingDoc) => {
+  if (drawingDoc.object) {
+    removeEffect(drawingDoc.object);
+    clearPlaceableSettings(drawingDoc.object).catch(() => {});
+  }
+});
+
+Hooks.on('deleteWall', (wallDoc) => {
+  if (wallDoc.object) {
+    removeEffect(wallDoc.object);
+    clearPlaceableSettings(wallDoc.object).catch(() => {});
+  }
+});
+
+Hooks.on('deleteAmbientLight', (lightDoc) => {
+  if (lightDoc.object) {
+    removeEffect(lightDoc.object);
+    clearPlaceableSettings(lightDoc.object).catch(() => {});
   }
 });
 
@@ -390,12 +733,14 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     canvas.tokens.placeables.forEach(t => t.hud?.render());
     refreshAllTokenIllumination();
     clearTargetingLines();
-    game.users.forEach(u => {
-      u.targets.forEach(t => {
-        const settings = getUserSettings(u.id);
-        drawTargetingLine(u, t, settings.color, settings.symbol);
+    if (getTargetingVisualsEnabled()) {
+      game.users.forEach(u => {
+        u.targets.forEach(t => {
+          const settings = getUserSettings(u.id);
+          drawTargetingLine(u, t, settings.color, settings.symbol);
+        });
       });
-    });
+    }
   });
 
   // Assign this token to a specific user (GM/Co-GM or player)
@@ -470,11 +815,55 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
   }
 });
 
+// Add a tile HUD button so GMs and Co-GMs can assign a unique illumination
+// profile directly on the scene object.
+Hooks.on('renderTileHUD', (app, html, data) => {
+  if (!isCoGM(game.user)) return;
+
+  const tile = app.object ?? app.tile;
+  if (!tile) return;
+  appendIlluminationButton(html, () => openPlaceableSettingsDialog(tile), 'rnk-illumination.ui.tile.configure');
+});
+
+Hooks.on('renderDrawingHUD', (app, html, data) => {
+  if (!isCoGM(game.user)) return;
+
+  const drawing = app.object ?? app.drawing;
+  if (!drawing) return;
+  appendIlluminationButton(html, () => openPlaceableSettingsDialog(drawing), 'rnk-illumination.ui.tile.configure');
+});
+
+Hooks.on('renderWallConfig', (app, html, data) => {
+  if (!isCoGM(game.user)) return;
+
+  const wall = app.object ?? app.document?.object ?? app.document;
+  if (!wall) return;
+  appendIlluminationButton(html, () => openPlaceableSettingsDialog(wall), 'rnk-illumination.ui.object.configure');
+});
+
+Hooks.on('renderAmbientLightConfig', (app, html, data) => {
+  if (!isCoGM(game.user)) return;
+
+  const light = app.object ?? app.document?.object ?? app.document;
+  if (!light) return;
+  appendIlluminationButton(html, () => openPlaceableSettingsDialog(light), 'rnk-illumination.ui.object.configure');
+});
+
 Hooks.on('canvasTearDown', () => {
   if (canvas?.tokens?.placeables) {
     canvas.tokens.placeables.forEach(token => {
       removeEffect(token);
       hideTargetingIndicator(token);
+    });
+  }
+  if (canvas?.tiles?.placeables) {
+    canvas.tiles.placeables.forEach(tile => {
+      removeEffect(tile);
+    });
+  }
+  if (canvas?.drawings?.placeables) {
+    canvas.drawings.placeables.forEach(drawing => {
+      removeEffect(drawing);
     });
   }
   clearTargetingIndicators();
@@ -534,5 +923,7 @@ Hooks.on('renderSceneControls', (app, html, data) => {
 
 // Global exposure
 globalThis.refreshAllTokenIllumination = refreshAllTokenIllumination;
+globalThis.refreshAllPlaceableIllumination = refreshAllPlaceableIllumination;
 globalThis.openIlluminationHub = openIlluminationHub;
+globalThis.openIlluminationObjectDialog = (placeable, onDone) => openPlaceableSettingsDialog(placeable, onDone);
 globalThis.RNKGMHub = RNKGMHub;

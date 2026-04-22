@@ -3,6 +3,7 @@
  */
 
 export const DEFAULT_SETTINGS = { color: '#ffffff', effect: 'glow', symbol: 'x', intensity: 1.0, range: 30 };
+export const DEFAULT_TARGETING_ENABLED = true;
 export const AVAILABLE_EFFECTS = ['none', 'glow', 'outline', 'shadow', 'neon'];
 export const AVAILABLE_SYMBOLS = ['x', 'plus', 'cross', 'triangle', 'square', 'circle', 'star', 'diamond', 'arrow', 'dot', 'ring', 'hexagon'];
 export const AVAILABLE_RANGES = [15, 20, 25, 30, 40, 50, 60];
