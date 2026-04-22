@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.14] - 2026-04-22
+
+### Fixed
+- Restored standard Shift multi-target selection by making RNK™ Illumination targeting overlays and distance markers click-through.
+
 ## [2.5.13] - 2026-04-22
 
 ### Added

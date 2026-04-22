@@ -7,6 +7,16 @@ import { AVAILABLE_SYMBOLS, DEFAULT_SETTINGS, IMAGE_URL_RE } from './constants.j
 // Targeting indicator storage
 const _targetingIndicators = new Map();
 
+function makePointerPassthrough(displayObject) {
+  if (!displayObject) return displayObject;
+  if ('eventMode' in displayObject) displayObject.eventMode = 'none';
+  if ('interactive' in displayObject) displayObject.interactive = false;
+  if ('interactiveChildren' in displayObject) displayObject.interactiveChildren = false;
+  if ('buttonMode' in displayObject) displayObject.buttonMode = false;
+  if ('accessible' in displayObject) displayObject.accessible = false;
+  return displayObject;
+}
+
 /**
  * Ensure targeting overlay container exists on token
  * @param {Token} token - The token to ensure container for
@@ -23,10 +33,11 @@ export function ensureTargetingContainer(token) {
       token.targetingContainer.x = 0;
       token.targetingContainer.y = 0;
     }
+    makePointerPassthrough(token.targetingContainer);
     return token.targetingContainer;
   }
 
-  const container = new PIXI.Container();
+  const container = makePointerPassthrough(new PIXI.Container());
   container.name = 'rnk-illumination-targeting-overlay';
   container.sortableChildren = true;
   container.x = 0;
@@ -149,7 +160,7 @@ export function createTargetingIndicator(token, color, symbol) {
     try { container.removeChild(existing).destroy({ children: true }); } catch (err) { /* ignore */ }
   }
 
-  const effectContainer = new PIXI.Container();
+  const effectContainer = makePointerPassthrough(new PIXI.Container());
   effectContainer.name = indicatorId;
   effectContainer.sortableChildren = true;
   effectContainer.zIndex = 50;
@@ -163,7 +174,7 @@ export function createTargetingIndicator(token, color, symbol) {
   const radius = Math.min(token.w, token.h) / 2 - 2;
   const borderWidth = Math.max(2, Math.round(Math.min(token.w, token.h) * 0.05));
 
-  const background = new PIXI.Graphics();
+  const background = makePointerPassthrough(new PIXI.Graphics());
   background.zIndex = 5;
   background.alpha = 0.3;
   background.beginFill(overlayColor, 1);
@@ -171,20 +182,20 @@ export function createTargetingIndicator(token, color, symbol) {
   background.endFill();
   effectContainer.addChild(background);
 
-  const border = new PIXI.Graphics();
+  const border = makePointerPassthrough(new PIXI.Graphics());
   border.zIndex = 10;
   border.lineStyle(borderWidth, overlayColor, 0.8, 0.5, true);
   border.drawCircle(0, 0, radius);
   effectContainer.addChild(border);
 
   if (AVAILABLE_SYMBOLS.includes(symbol)) {
-    const symbolGraphics = new PIXI.Graphics();
+    const symbolGraphics = makePointerPassthrough(new PIXI.Graphics());
     symbolGraphics.zIndex = 15;
     drawSymbol(symbolGraphics, symbol, 0, 0, radius * 0.6, overlayColor, Math.max(2, Math.round(Math.min(token.w, token.h) * 0.03)));
     effectContainer.addChild(symbolGraphics);
   } else {
     try {
-      const sprite = PIXI.Sprite.from(symbol);
+      const sprite = makePointerPassthrough(PIXI.Sprite.from(symbol));
       sprite.zIndex = 15;
       sprite.anchor.set(0.5, 0.5);
       try { sprite.tint = overlayColor; } catch (e) { /* ignore */ }
@@ -193,7 +204,7 @@ export function createTargetingIndicator(token, color, symbol) {
       sprite.height = size * 2;
       effectContainer.addChild(sprite);
     } catch (err) {
-      const fallback = new PIXI.Graphics();
+      const fallback = makePointerPassthrough(new PIXI.Graphics());
       fallback.zIndex = 15;
       drawSymbol(fallback, 'x', 0, 0, radius * 0.6, overlayColor, Math.max(2, Math.round(Math.min(token.w, token.h) * 0.03)));
       effectContainer.addChild(fallback);

@@ -8,6 +8,16 @@ import { drawSymbol } from './targeting.js';
 const _targetingLines = new Map();
 let _getUserToken = () => null;
 
+function makePointerPassthrough(displayObject) {
+  if (!displayObject) return displayObject;
+  if ('eventMode' in displayObject) displayObject.eventMode = 'none';
+  if ('interactive' in displayObject) displayObject.interactive = false;
+  if ('interactiveChildren' in displayObject) displayObject.interactiveChildren = false;
+  if ('buttonMode' in displayObject) displayObject.buttonMode = false;
+  if ('accessible' in displayObject) displayObject.accessible = false;
+  return displayObject;
+}
+
 export function configureTargetingLines({ getUserToken } = {}) {
   if (typeof getUserToken === 'function') {
     _getUserToken = getUserToken;
@@ -21,7 +31,7 @@ function getTargetingLineGraphics(userId, targetId) {
 
   const userLines = _targetingLines.get(userId);
   if (!userLines.has(targetId)) {
-    const graphics = new PIXI.Graphics();
+    const graphics = makePointerPassthrough(new PIXI.Graphics());
     graphics.name = `rnk-targeting-${userId}-${targetId}`;
     canvas.controls.addChild(graphics);
     graphics.zIndex = 100;
@@ -52,7 +62,7 @@ function addMarkerSymbol(graphics, symbol, x, y, colorValue) {
   if (typeof symbol !== 'string') symbol = DEFAULT_SETTINGS.symbol;
 
   if (AVAILABLE_SYMBOLS.includes(symbol)) {
-    const marker = new PIXI.Graphics();
+    const marker = makePointerPassthrough(new PIXI.Graphics());
     drawSymbol(marker, symbol, 0, 0, 7, colorValue, 2);
     marker.position.set(x, y);
     graphics.addChild(marker);
@@ -60,7 +70,7 @@ function addMarkerSymbol(graphics, symbol, x, y, colorValue) {
   }
 
   if (IMAGE_URL_RE.test(symbol)) {
-    const marker = PIXI.Sprite.from(symbol);
+    const marker = makePointerPassthrough(PIXI.Sprite.from(symbol));
     marker.anchor.set(0.5, 0.5);
     marker.position.set(x, y);
     marker.width = 16;
@@ -70,7 +80,7 @@ function addMarkerSymbol(graphics, symbol, x, y, colorValue) {
     return;
   }
 
-  const fallback = new PIXI.Graphics();
+  const fallback = makePointerPassthrough(new PIXI.Graphics());
   drawSymbol(fallback, DEFAULT_SETTINGS.symbol, 0, 0, 7, colorValue, 2);
   fallback.position.set(x, y);
   graphics.addChild(fallback);
@@ -124,14 +134,14 @@ export function drawTargetingLine(user, targetToken, color, symbol = DEFAULT_SET
 
     addMarkerSymbol(graphics, symbol, markerX, markerY, colorValue);
 
-    const text = new PIXI.Text(`${distance}${units}`, {
+    const text = makePointerPassthrough(new PIXI.Text(`${distance}${units}`, {
       fontFamily: 'Arial',
       fontSize: 14,
       fill: 0xFFFFFF,
       align: 'center',
       stroke: 0x000000,
       strokeThickness: 3
-    });
+    }));
     text.anchor.set(0.5, 0.5);
     text.position.set(markerX, markerY - 15);
     graphics.addChild(text);

@@ -108,7 +108,7 @@ Players do not have a hub; illumination settings are controlled through the admi
 
 ## Release Notes
 
-Current release: `2.5.13`
+Current release: `2.5.14`
 
 See [CHANGELOG.md](CHANGELOG.md) for the full release history and release details.
 
