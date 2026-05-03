@@ -492,11 +492,8 @@ Hooks.on('init', () => {
       }
     }
   });
-});
 
-Hooks.on('ready', () => {
-  // register the hidden setting that tracks which token the GM has chosen as
-  // the active origin for targeting lines.
+  // Register world settings before canvas hooks can read them.
   game.settings.register(MODULE_ID, 'gmOriginTokenId', {
     name: 'rnk-illumination.settings.gmOrigin.name',
     scope: 'world',
@@ -524,6 +521,9 @@ Hooks.on('ready', () => {
       restricted: true
     });
   }
+});
+
+Hooks.on('ready', () => {
   if (canvas?.tokens?.placeables) refreshAllTokenIllumination();
   if (canvas?.tiles?.placeables) refreshAllPlaceableIllumination();
 });
@@ -706,7 +706,7 @@ Hooks.on('deleteAmbientLight', (lightDoc) => {
 Hooks.on('renderTokenHUD', (app, html, data) => {
   if (!isCoGM(game.user)) return;
 
-  // V13 uses app.object, older versions use app.token
+  // Foundry V13/V14 token HUDs expose the placeable on app.object.
   const token = app.object ?? app.token;
   if (!token || !token.actor) return;
   if (token.actor.hasPlayerOwner) return;
@@ -715,7 +715,7 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
   const isActive = originId === token.id;
   const titleKey = isActive ? "rnk-illumination.ui.token.originButtonActive" : "rnk-illumination.ui.token.originButton";
 
-  // Create button as a native DOM element (works in both V12 jQuery and V13 native)
+  // Create button as a native DOM element so it works cleanly in v13/v14.
   const btn = document.createElement('a');
   btn.classList.add('control-icon', 'rnk-origin-btn');
   if (isActive) btn.classList.add('active');
@@ -796,7 +796,7 @@ Hooks.on('renderTokenHUD', (app, html, data) => {
     }).render(true);
   });
 
-  // Resolve the root element whether html is jQuery or a native element
+  // Resolve the root element whether the hook passes a jQuery wrapper or native element.
   const root = html instanceof HTMLElement ? html : (html[0] ?? html);
   const selectors = ['.col.right', '.col.left', '.col', '.controls'];
   let inserted = false;

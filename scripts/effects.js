@@ -34,8 +34,8 @@ export function sanitizeColor(color) {
 }
 
 /**
- * Get the appropriate filter class based on availability
- * Foundry v12+ uses different filter locations
+ * Get the appropriate filter class based on availability.
+ * Foundry's filter globals vary by runtime, so check both locations.
  */
 export function getFilterClass(filterName) {
   if (globalThis.PIXI?.filters?.[filterName]) {

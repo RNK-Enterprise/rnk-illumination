@@ -1,6 +1,6 @@
 {
   "name": "rnk-illumination",
-  "version": "2.5.14",
+  "version": "2.5.15",
   "description": "Advanced token illumination with custom underglow effects, administrator hub controls, and targeting line visuals.",
   "type": "module",
   "main": "scripts/rnk-illumination.js",
@@ -8,7 +8,8 @@
     "foundry",
     "foundry-vtt",
     "module",
-    "v13"
+    "v13",
+    "v14"
   ],
   "author": "RNK™ Enterprises",
   "license": "Proprietary",

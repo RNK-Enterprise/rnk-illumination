@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [2.5.15] - 2026-05-02
+
+### Fixed
+- Prevented a canvas initialization crash when the targeting toggle setting has not been registered yet.
+
 ## [2.5.14] - 2026-04-22
 
 ### Fixed
